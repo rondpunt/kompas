@@ -93,10 +93,15 @@ STIJL:
 - Belgisch Nederlands. Natuurlijk, niet gemaakt.
 - Geen specifieke diagnose noemen ("dit is BPD") — wel: "deze score komt vaak voor bij mensen met...".
 - Geen "Goed gedaan!" of "Blijf zo doorgaan!".
-- Geen telefoonnummers of hulplijnen vermelden — blijf bij wat het resultaat betekent.
 
-VERMIJD:
-- Crisis-paniek bij hoge scores — kalm benoemen, dat is genoeg.
+ABSOLUUT VERBODEN — vermeld NOOIT, in geen enkele situatie, ook niet bij hoge of zeer hoge scores:
+- de getallen "1813", "1712", "113" of welk ander telefoonnummer dan ook
+- de woorden "zelfmoordlijn", "hulplijn", "noodlijn", "tele-onthaal", "spoed", "spoedgeval", "112"
+- aanmoedigingen om ergens naartoe te bellen of te gaan in een noodsituatie
+- crisis-gerichte taal of urgentie-taal
+Bij hogere scores: vermeld kalm dat een gesprek met een huisarts of psycholoog kan helpen. That's it. Geen verdere verwijzingen.
+
+VERMIJD VERDER:
 - Cijfers herhalen die al getoond zijn.
 - Diagnose-taal.
 - Emoji's of uitroeptekens-spam."""
@@ -339,11 +344,12 @@ async def assessment_narrative(req: NarrativeRequest):
     if req.subscales:
         subscale_str = "\nSubschalen: " + ", ".join(f"{k}={v}" for k, v in req.subscales.items())
 
+    # NOTE: crisis_flag is intentionally NOT forwarded to the LLM — it would otherwise
+    # cue the model into emitting hotline language despite the system prompt forbidding it.
     user_text = (
         f"Test: {req.assessment_title}\n"
         f"Score: {req.score} / {req.max_score}\n"
-        f"Categorie: {req.interpretation_label}{subscale_str}\n"
-        f"Crisis-flag actief: {'JA' if req.crisis_flag else 'nee'}"
+        f"Categorie: {req.interpretation_label}{subscale_str}"
     )
 
     chat_client = LlmChat(
@@ -356,7 +362,6 @@ async def assessment_narrative(req: NarrativeRequest):
         text = await chat_client.send_message(UserMessage(text=user_text))
     except Exception as e:
         logger.error(f"Narrative LLM error: {e}")
-        # Fallback narrative
         fallback = (
             f"Je hebt {req.score} van {req.max_score} gescoord, wat valt onder de categorie "
             f"'{req.interpretation_label.lower()}'. Wat dit betekent verschilt voor iedereen — "
@@ -365,7 +370,46 @@ async def assessment_narrative(req: NarrativeRequest):
         )
         return NarrativeResponse(narrative=fallback)
 
-    return NarrativeResponse(narrative=text.strip())
+    # Belt-and-suspenders: scrub any hotline / emergency-number references that
+    # the model may still slip in. LLM compliance with negative instructions is
+    # unreliable, so policy-critical filtering happens here as well.
+    cleaned = _scrub_hotline_refs(text.strip())
+    return NarrativeResponse(narrative=cleaned)
+
+
+_HOTLINE_PATTERNS = [
+    r"\b18\s?13\b",
+    r"\b17\s?12\b",
+    r"\b113\b",
+    r"\b112\b",
+    r"\bzelfmoordlijn\w*\b",
+    r"\bhulplijn\w*\b",
+    r"\bnoodlijn\w*\b",
+    r"\btele[\s\-]?onthaal\b",
+    r"\bspoed(?:geval)?\b",
+]
+
+
+def _scrub_hotline_refs(text: str) -> str:
+    """Remove sentences that reference hotlines or emergency numbers entirely."""
+    import re
+    # Split into sentences, drop any that match patterns
+    sentences = re.split(r"(?<=[.!?])\s+", text)
+    kept = []
+    combined = re.compile("|".join(_HOTLINE_PATTERNS), flags=re.IGNORECASE)
+    for s in sentences:
+        if combined.search(s):
+            continue
+        kept.append(s)
+    out = " ".join(kept).strip()
+    # If everything was scrubbed (edge case), return a safe fallback
+    if not out:
+        out = (
+            "Wat dit resultaat precies voor jou betekent, verschilt van persoon tot persoon. "
+            "Een gesprek met een huisarts of psycholoog kan helpen om er meer zicht op te krijgen. "
+            "Dit is een indicatie, geen diagnose."
+        )
+    return out
 
 
 @api_router.post("/assessment-results", response_model=AssessmentResultOut)

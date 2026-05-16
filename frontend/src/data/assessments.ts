@@ -1,5 +1,5 @@
 // Kompas — 24 gevalideerde zelftesten
-// Belgisch Nederlands. Crisis-hulplijn: 1813 (Zelfmoordlijn België).
+// Belgisch Nederlands.
 
 export type AnswerOption = { value: number; label: string };
 
