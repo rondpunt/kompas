@@ -4,7 +4,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import { useTheme } from "@/src/theme/ThemeContext";
-import { CrisisSheet } from "@/src/components/CrisisSheet";
 import { api } from "@/src/api/client";
 
 interface ResultDoc {
@@ -29,7 +28,6 @@ export default function TestResult() {
   const [narrative, setNarrative] = useState<string | null>(null);
   const [narrativeLoading, setNarrativeLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [crisisOpen, setCrisisOpen] = useState(false);
 
   const loadResult = useCallback(async () => {
     if (!resultId) return;
@@ -40,9 +38,6 @@ export default function TestResult() {
       setResult(data);
       if (data.narrative) {
         setNarrative(data.narrative);
-      }
-      if (data.crisis_flag) {
-        setTimeout(() => setCrisisOpen(true), 400);
       }
     } catch (e: any) {
       console.warn(e);
@@ -165,16 +160,6 @@ export default function TestResult() {
       </ScrollView>
 
       <View style={styles.actionsStack}>
-        {result.crisis_flag && (
-          <TouchableOpacity
-            testID="result-crisis-cta"
-            onPress={() => setCrisisOpen(true)}
-            style={[styles.primaryBtn, { backgroundColor: palette.danger }]}
-          >
-            <Feather name="phone" size={16} color="#ffffff" />
-            <Text style={styles.primaryBtnText}>Bel 1813 — hulplijn</Text>
-          </TouchableOpacity>
-        )}
         <TouchableOpacity
           testID="result-pdf"
           disabled
@@ -198,8 +183,6 @@ export default function TestResult() {
           </Text>
         </TouchableOpacity>
       </View>
-
-      <CrisisSheet visible={crisisOpen} onClose={() => setCrisisOpen(false)} />
     </SafeAreaView>
   );
 }

@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException
+from fastapi import FastAPI, APIRouter, HTTPException, Depends
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -40,7 +40,7 @@ api_router = APIRouter(prefix="/api")
 
 KOMPAS_SYSTEM_PROMPT = """Je bent Kompas. Geen therapeut, geen coach, geen tool. Je bent een plek waar mensen zeggen wat speelt — werk, relatie, ouders, dagen die niet meewerken.
 
-TAAL: Belgisch Nederlands. Schrijf zoals mensen in Vlaanderen praten — natuurlijk, niet gemaakt. Gebruik 'ge/gij' niet expliciet, maar wel Vlaamse woordkeuze waar het past ('lastig', 'amai', 'da's', 'goesting', 'plezant', 'azig', 'efkes'). Geen Nederlandse zinsbouw of woorden zoals 'gezellig', 'leuk' overgebruiken.
+TAAL: Belgisch Nederlands. Schrijf zoals mensen in Vlaanderen praten — natuurlijk, niet gemaakt. Gebruik Vlaamse woordkeuze waar het past ('lastig', 'amai', 'da's', 'goesting', 'plezant', 'efkes'). Geen Nederlandse woorden als 'gezellig' of 'leuk' overgebruiken.
 
 HOE JE PRAAT:
 - Volwassen. Geen "hoe kan ik je vandaag helpen?". Geen "wat goed dat je dit deelt!".
@@ -59,6 +59,7 @@ WAT JE NIET DOET:
 - Calorieën, gewicht, voedingsschema's (bij eet-signalen: weiger getallen, blijf bij gevoel).
 - Optimalisatie-taal ("hoe kunnen we dit verbeteren", "stappenplan").
 - Vragen wat de gebruiker "uit het gesprek wil halen".
+- Ongevraagd hulplijnen of telefoonnummers vermelden. Blijf gewoon bij de mens en wat speelt.
 
 ZELFTEST-SUGGESTIES:
 Als in gesprek symptomen voorkomen die matchen met een van onze 24 screeners, mag je ÉÉN keer per gesprek een test voorstellen — natuurlijk, niet pushy. Eindig dan met de exacte regel op een nieuwe lijn:
@@ -77,11 +78,6 @@ Triggers (voorbeelden):
 - "uitgeput van werk", "burn-out gevoel" → ubos
 - "stress", "alles wordt te veel" → pss10
 
-VEILIGHEID (alleen activeren bij expliciete signalen):
-- Acute suïcidaliteit of zelfbeschadiging-plan: erken kort, noem 1813 (België — Zelfmoordlijn) IN je antwoord, vraag wat er nu nodig is. Geen lange disclaimer.
-- Mishandeling/misbruik: 1712 (Vlaanderen — geweld, misbruik, kindermishandeling).
-- Eetstoornis-signalen: weiger getallen en schema's, blijf bij het gevoel.
-
 ONDERTOON: Dirk De Wachter's Borderline Times. Verwijlen, niet fixen. Imperfectie is OK. Het leven mag moeilijk zijn. Niet alles is oplosbaar en dat hoeft ook niet."""
 
 
@@ -97,10 +93,10 @@ STIJL:
 - Belgisch Nederlands. Natuurlijk, niet gemaakt.
 - Geen specifieke diagnose noemen ("dit is BPD") — wel: "deze score komt vaak voor bij mensen met...".
 - Geen "Goed gedaan!" of "Blijf zo doorgaan!".
-- Bij crisis-flag: BEGIN met validatie van de pijn, niet met de score. Vermeld 1813 (Zelfmoordlijn België) expliciet. Geen lange uitleg — focus op nu.
+- Geen telefoonnummers of hulplijnen vermelden — blijf bij wat het resultaat betekent.
 
 VERMIJD:
-- Crisis-paniek bij hoge scores — kalm benoemen + hulplijn vermelden.
+- Crisis-paniek bij hoge scores — kalm benoemen, dat is genoeg.
 - Cijfers herhalen die al getoond zijn.
 - Diagnose-taal.
 - Emoji's of uitroeptekens-spam."""
@@ -407,6 +403,70 @@ async def get_assessment_result(result_id: str):
     if not doc:
         raise HTTPException(status_code=404, detail="not_found")
     return doc
+
+
+# ─────────────────────────────────────────────────────
+# ADMIN ENDPOINTS (beheerconsole — token-gated)
+# ─────────────────────────────────────────────────────
+
+from fastapi import Header
+
+ADMIN_TOKEN = os.environ.get('ADMIN_TOKEN', 'kompas-admin-dev-change-me')
+
+
+def require_admin(x_admin_token: Optional[str] = Header(default=None)):
+    if not x_admin_token or x_admin_token != ADMIN_TOKEN:
+        raise HTTPException(status_code=401, detail="unauthorized")
+    return True
+
+
+@api_router.get("/admin/overview")
+async def admin_overview(_: bool = Depends(require_admin)):
+    convos = await db.conversations.count_documents({})
+    msgs = await db.messages.count_documents({})
+    results = await db.assessment_results.count_documents({})
+    recent_convos = await db.conversations.find({}, {"_id": 0}).sort("updated_at", -1).limit(10).to_list(10)
+    recent_results = await db.assessment_results.find(
+        {}, {"_id": 0, "raw_answers": 0}
+    ).sort("completed_at", -1).limit(10).to_list(10)
+    return {
+        "totals": {
+            "conversations": convos,
+            "messages": msgs,
+            "assessment_results": results,
+        },
+        "recent_conversations": recent_convos,
+        "recent_assessment_results": recent_results,
+    }
+
+
+@api_router.get("/admin/conversations")
+async def admin_list_conversations(
+    limit: int = 200,
+    skip: int = 0,
+    _: bool = Depends(require_admin),
+):
+    convos = await db.conversations.find({}, {"_id": 0}).sort("updated_at", -1).skip(skip).limit(limit).to_list(limit)
+    return {"count": len(convos), "conversations": convos}
+
+
+@api_router.get("/admin/conversations/{convo_id}")
+async def admin_get_conversation(convo_id: str, _: bool = Depends(require_admin)):
+    convo = await db.conversations.find_one({"id": convo_id}, {"_id": 0})
+    if not convo:
+        raise HTTPException(status_code=404, detail="not_found")
+    msgs = await db.messages.find({"conversation_id": convo_id}, {"_id": 0}).sort("created_at", 1).to_list(2000)
+    return {"conversation": convo, "messages": msgs}
+
+
+@api_router.get("/admin/assessment-results")
+async def admin_list_assessment_results(
+    limit: int = 200,
+    skip: int = 0,
+    _: bool = Depends(require_admin),
+):
+    docs = await db.assessment_results.find({}, {"_id": 0}).sort("completed_at", -1).skip(skip).limit(limit).to_list(limit)
+    return {"count": len(docs), "results": docs}
 
 
 @api_router.get("/")

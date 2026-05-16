@@ -100,7 +100,7 @@ export default function Settings() {
 
       <View style={[styles.disclaimerBar, { borderTopColor: palette.borderSubtle, backgroundColor: palette.background }]}>
         <Text style={[styles.disclaimerText, { color: palette.textMuted }]}>
-          Kompas is geen vervanging voor professionele zorg. Bij crisis: bel 1813 (BE) of 113 (NL).
+          Kompas is geen vervanging voor professionele zorg.
         </Text>
       </View>
     </SafeAreaView>

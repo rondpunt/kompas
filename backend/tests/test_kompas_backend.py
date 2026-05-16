@@ -126,7 +126,8 @@ class TestNarrative:
         wc = len(text.split())
         assert 80 <= wc <= 320, f"unexpected word count {wc}"
 
-    def test_narrative_crisis_mentions_1813(self):
+    def test_narrative_crisis_does_not_mention_1813(self):
+        # Per iteration-2 spec: narrative must NOT include phone numbers/hulplijnen even at crisis_flag=true
         r = session.post(f"{API}/assessment-narrative", json={
             "assessment_id": "phq9",
             "assessment_title": "PHQ-9 — Depressie",
@@ -136,7 +137,89 @@ class TestNarrative:
             "crisis_flag": True,
         }, timeout=TIMEOUT)
         assert r.status_code == 200, r.text
-        assert "1813" in r.json()["narrative"]
+        text = r.json()["narrative"]
+        assert "1813" not in text, f"narrative should NOT mention 1813: {text}"
+        assert "zelfmoordlijn" not in text.lower(), f"narrative should NOT mention zelfmoordlijn: {text}"
+
+
+# ---------- Chat must NOT proactively mention 1813 ----------
+class TestChatNoCrisisCTA:
+    def test_chat_everyday_problem_no_1813(self):
+        r = session.post(f"{API}/chat", json={"message": "ik voel me al een paar dagen plat"}, timeout=TIMEOUT)
+        assert r.status_code == 200, r.text
+        content = r.json()["assistant_message"]["content"]
+        assert "1813" not in content, f"chat should NOT proactively mention 1813: {content}"
+        assert "zelfmoordlijn" not in content.lower()
+
+
+# ---------- Admin endpoints (token-gated) ----------
+ADMIN_TOKEN = "kompas-admin-dev-2026"
+
+
+class TestAdminAuth:
+    def test_overview_no_token_401(self):
+        r = requests.get(f"{API}/admin/overview", timeout=15)
+        assert r.status_code == 401
+
+    def test_overview_wrong_token_401(self):
+        r = requests.get(f"{API}/admin/overview", headers={"X-Admin-Token": "wrong-token"}, timeout=15)
+        assert r.status_code == 401
+
+    def test_conversations_no_token_401(self):
+        r = requests.get(f"{API}/admin/conversations", timeout=15)
+        assert r.status_code == 401
+
+    def test_assessment_results_no_token_401(self):
+        r = requests.get(f"{API}/admin/assessment-results", timeout=15)
+        assert r.status_code == 401
+
+
+class TestAdminEndpoints:
+    headers = {"X-Admin-Token": ADMIN_TOKEN}
+
+    def test_overview_ok(self):
+        r = requests.get(f"{API}/admin/overview", headers=self.headers, timeout=20)
+        assert r.status_code == 200, r.text
+        j = r.json()
+        assert "totals" in j
+        assert "conversations" in j["totals"]
+        assert "messages" in j["totals"]
+        assert "assessment_results" in j["totals"]
+        assert isinstance(j["totals"]["conversations"], int)
+        assert isinstance(j["recent_conversations"], list)
+        assert isinstance(j["recent_assessment_results"], list)
+
+    def test_admin_list_conversations(self):
+        r = requests.get(f"{API}/admin/conversations", headers=self.headers, timeout=20)
+        assert r.status_code == 200, r.text
+        j = r.json()
+        assert "count" in j and "conversations" in j
+        assert isinstance(j["conversations"], list)
+
+    def test_admin_get_conversation(self):
+        if not TestChat.convo_id:
+            pytest.skip("no conversation seeded")
+        r = requests.get(f"{API}/admin/conversations/{TestChat.convo_id}", headers=self.headers, timeout=20)
+        assert r.status_code == 200, r.text
+        j = r.json()
+        assert j["conversation"]["id"] == TestChat.convo_id
+        assert isinstance(j["messages"], list)
+
+    def test_admin_get_conversation_404(self):
+        r = requests.get(f"{API}/admin/conversations/no-such-id", headers=self.headers, timeout=15)
+        assert r.status_code == 404
+
+    def test_admin_assessment_results_includes_raw_answers(self):
+        r = requests.get(f"{API}/admin/assessment-results", headers=self.headers, timeout=20)
+        assert r.status_code == 200, r.text
+        j = r.json()
+        assert "count" in j and "results" in j
+        assert isinstance(j["results"], list)
+        # At least one result should have raw_answers (we seeded one in TestAssessmentResults)
+        if j["results"]:
+            # find one where raw_answers is present
+            with_raw = [d for d in j["results"] if "raw_answers" in d and d["raw_answers"] is not None]
+            assert with_raw, "expected at least one result with raw_answers in admin endpoint"
 
 
 # ---------- Assessment results CRUD ----------

@@ -13,23 +13,43 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { useTheme } from "@/src/theme/ThemeContext";
 import { Wordmark } from "@/src/components/Wordmark";
 import { Sidebar } from "@/src/components/Sidebar";
-import { CrisisSheet } from "@/src/components/CrisisSheet";
 import { TestSuggestionPill } from "@/src/components/TestSuggestionPill";
+import { SecureHandshake } from "@/src/components/SecureHandshake";
 import { api, ApiMessage, ChatResponse } from "@/src/api/client";
+import { hasOnboarded } from "./onboarding";
+
+// Module-level flag so the handshake plays only once per app launch
+let coldLaunchHandshakeShown = false;
 
 export default function ChatScreen() {
   const { palette } = useTheme();
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [crisisOpen, setCrisisOpen] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ApiMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [cursorVisible, setCursorVisible] = useState(true);
+  const [handshakeVisible, setHandshakeVisible] = useState(!coldLaunchHandshakeShown);
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
+
+  // First mount: route to /onboarding if not done yet
+  useEffect(() => {
+    (async () => {
+      const done = await hasOnboarded();
+      if (!done) {
+        router.replace("/onboarding");
+        return;
+      }
+      setOnboardingChecked(true);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Typewriter cursor blink (only when sending)
   useEffect(() => {
@@ -61,7 +81,6 @@ export default function ChatScreen() {
     Keyboard.dismiss();
     setSending(true);
 
-    // Optimistic user message
     const optimisticUser: ApiMessage = {
       id: `tmp-${Date.now()}`,
       conversation_id: conversationId ?? "",
@@ -75,14 +94,10 @@ export default function ChatScreen() {
       const res: ChatResponse = await api.chat(text, conversationId ?? undefined);
       setConversationId(res.conversation_id);
       setMessages((prev) => {
-        // replace optimistic with real, then append assistant
         const withoutOpt = prev.filter((m) => m.id !== optimisticUser.id);
         return [...withoutOpt, res.user_message, res.assistant_message];
       });
-      if (res.crisis_detected) {
-        setCrisisOpen(true);
-      }
-    } catch (e: any) {
+    } catch (e) {
       setMessages((prev) => [
         ...prev,
         {
@@ -104,12 +119,16 @@ export default function ChatScreen() {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60);
   }, [messages.length]);
 
+  // ── Conditional return AFTER all hooks ─────────────────────
+  if (!onboardingChecked) {
+    return <View style={{ flex: 1, backgroundColor: palette.background }} />;
+  }
+
   const isEmpty = messages.length === 0;
   const hasText = draft.trim().length > 0;
 
   return (
     <SafeAreaView style={[styles.root, { backgroundColor: palette.background }]} edges={["top", "bottom", "left", "right"]}>
-      {/* Top bar */}
       <View style={[styles.topBar, { borderBottomColor: palette.borderDefault }]} testID="chat-topbar">
         <TouchableOpacity
           testID="chat-hamburger"
@@ -122,6 +141,9 @@ export default function ChatScreen() {
         <TouchableOpacity
           testID="chat-new-pencil"
           onPress={() => {
+            if (messages.length > 0) {
+              setHandshakeVisible(true);
+            }
             setConversationId(null);
             setMessages([]);
             setDraft("");
@@ -135,7 +157,6 @@ export default function ChatScreen() {
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
       >
         {isEmpty ? (
           <View style={styles.emptyState} testID="chat-empty">
@@ -187,7 +208,6 @@ export default function ChatScreen() {
           </ScrollView>
         )}
 
-        {/* Input area */}
         <View style={[styles.inputArea, { backgroundColor: palette.background }]}>
           <View
             style={[
@@ -248,7 +268,14 @@ export default function ChatScreen() {
         onSelectConversation={(id) => setConversationId(id)}
       />
 
-      <CrisisSheet visible={crisisOpen} onClose={() => setCrisisOpen(false)} />
+      {handshakeVisible && (
+        <SecureHandshake
+          onComplete={() => {
+            coldLaunchHandshakeShown = true;
+            setHandshakeVisible(false);
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 }
