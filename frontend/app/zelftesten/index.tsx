@@ -148,16 +148,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   chipsScroll: {
-    maxHeight: 44,
+    maxHeight: 48,
   },
   chipsRow: {
     paddingHorizontal: 14,
-    paddingBottom: 8,
+    paddingBottom: 10,
+    paddingTop: 2,
     gap: 8,
     flexDirection: "row",
   },
   chip: {
-    paddingVertical: 6,
+    paddingVertical: 8,
     paddingHorizontal: 14,
     borderRadius: 999,
     borderWidth: 0.5,
