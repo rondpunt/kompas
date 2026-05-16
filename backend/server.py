@@ -1,14 +1,15 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
+import httpx
 from pathlib import Path
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 
@@ -214,22 +215,213 @@ def detect_suggested_test(reply: str):
     return cleaned, test_id
 
 
+def _owner_query(user: Optional[Dict[str, Any]], device_id: Optional[str]) -> Dict[str, Any]:
+    """Build a MongoDB query that scopes documents to the authenticated user
+    OR (if anonymous) to the device_id provided by the client."""
+    if user:
+        return {"user_id": user["user_id"]}
+    if device_id:
+        return {"device_id": device_id, "$or": [{"user_id": None}, {"user_id": {"$exists": False}}]}
+    # No identity at all → return a query matching nothing
+    return {"_no_owner_": True}
+
+
+def _owner_fields(user: Optional[Dict[str, Any]], device_id: Optional[str]) -> Dict[str, Any]:
+    """Fields to set when creating a new doc."""
+    return {
+        "user_id": user["user_id"] if user else None,
+        "device_id": device_id,
+    }
+
+
+# ─────────────────────────────────────────────────────
+# AUTH (Emergent-managed Google Auth)
+# ─────────────────────────────────────────────────────
+
+EMERGENT_AUTH_SESSION_URL = "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data"
+SESSION_TTL_DAYS = 7
+
+
+class AuthSessionRequest(BaseModel):
+    session_id: str  # one-time token from Emergent OAuth redirect
+
+
+class AuthUser(BaseModel):
+    user_id: str
+    email: str
+    name: str
+    picture: Optional[str] = None
+
+
+class AuthSessionResponse(BaseModel):
+    user: AuthUser
+    session_token: str
+    expires_at: str
+
+
+def _normalize_aware(dt: datetime) -> datetime:
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
+async def get_current_user(request: Request) -> Optional[Dict[str, Any]]:
+    """Read Bearer token from Authorization header; return user dict or None."""
+    auth = request.headers.get("authorization") or request.headers.get("Authorization")
+    if not auth or not auth.lower().startswith("bearer "):
+        return None
+    token = auth.split(" ", 1)[1].strip()
+    if not token:
+        return None
+    session = await db.user_sessions.find_one({"session_token": token}, {"_id": 0})
+    if not session:
+        return None
+    expires_at = session.get("expires_at")
+    if isinstance(expires_at, str):
+        try:
+            expires_at = datetime.fromisoformat(expires_at)
+        except Exception:
+            return None
+    expires_at = _normalize_aware(expires_at)
+    if expires_at < datetime.now(timezone.utc):
+        await db.user_sessions.delete_one({"session_token": token})
+        return None
+    user = await db.users.find_one({"user_id": session["user_id"]}, {"_id": 0})
+    return user
+
+
+async def require_user(request: Request) -> Dict[str, Any]:
+    user = await get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="unauthorized")
+    return user
+
+
+@api_router.post("/auth/session", response_model=AuthSessionResponse)
+async def auth_session(req: AuthSessionRequest):
+    """Process Emergent OAuth session_id, upsert user, create session."""
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        try:
+            r = await client.get(
+                EMERGENT_AUTH_SESSION_URL,
+                headers={"X-Session-ID": req.session_id},
+            )
+        except httpx.HTTPError as e:
+            raise HTTPException(status_code=502, detail=f"auth_provider_error: {e}")
+    if r.status_code != 200:
+        raise HTTPException(status_code=401, detail="invalid_session_id")
+    data = r.json()
+    email = data.get("email")
+    if not email:
+        raise HTTPException(status_code=401, detail="invalid_session_payload")
+
+    # Upsert user
+    existing = await db.users.find_one({"email": email}, {"_id": 0})
+    if existing:
+        user_id = existing["user_id"]
+        await db.users.update_one(
+            {"user_id": user_id},
+            {"$set": {
+                "name": data.get("name") or existing.get("name"),
+                "picture": data.get("picture") or existing.get("picture"),
+                "last_login": now_iso(),
+            }},
+        )
+    else:
+        user_id = f"user_{uuid.uuid4().hex[:12]}"
+        await db.users.insert_one({
+            "user_id": user_id,
+            "email": email,
+            "name": data.get("name") or email.split("@")[0],
+            "picture": data.get("picture"),
+            "created_at": now_iso(),
+            "last_login": now_iso(),
+        })
+
+    # Create session
+    session_token = data.get("session_token") or uuid.uuid4().hex
+    expires_at = datetime.now(timezone.utc) + timedelta(days=SESSION_TTL_DAYS)
+    await db.user_sessions.insert_one({
+        "session_token": session_token,
+        "user_id": user_id,
+        "created_at": now_iso(),
+        "expires_at": expires_at.isoformat(),
+    })
+
+    user_doc = await db.users.find_one({"user_id": user_id}, {"_id": 0})
+    return AuthSessionResponse(
+        user=AuthUser(
+            user_id=user_doc["user_id"],
+            email=user_doc["email"],
+            name=user_doc["name"],
+            picture=user_doc.get("picture"),
+        ),
+        session_token=session_token,
+        expires_at=expires_at.isoformat(),
+    )
+
+
+@api_router.get("/auth/me", response_model=AuthUser)
+async def auth_me(user: Dict[str, Any] = Depends(require_user)):
+    return AuthUser(
+        user_id=user["user_id"],
+        email=user["email"],
+        name=user["name"],
+        picture=user.get("picture"),
+    )
+
+
+@api_router.post("/auth/logout")
+async def auth_logout(request: Request):
+    auth = request.headers.get("authorization") or request.headers.get("Authorization")
+    if auth and auth.lower().startswith("bearer "):
+        token = auth.split(" ", 1)[1].strip()
+        await db.user_sessions.delete_one({"session_token": token})
+    return {"ok": True}
+
+
+class ClaimRequest(BaseModel):
+    device_id: str
+
+
+@api_router.post("/auth/claim")
+async def auth_claim(req: ClaimRequest, user: Dict[str, Any] = Depends(require_user)):
+    """Link all anonymous conversations + results from device_id to this user."""
+    convo_res = await db.conversations.update_many(
+        {"device_id": req.device_id, "user_id": {"$in": [None, "", None]}},
+        {"$set": {"user_id": user["user_id"]}},
+    )
+    result_res = await db.assessment_results.update_many(
+        {"device_id": req.device_id, "user_id": {"$in": [None, "", None]}},
+        {"$set": {"user_id": user["user_id"]}},
+    )
+    return {
+        "claimed_conversations": convo_res.modified_count,
+        "claimed_results": result_res.modified_count,
+    }
+
+
 # ─────────────────────────────────────────────────────
 # CHAT ENDPOINTS
 # ─────────────────────────────────────────────────────
 
 @api_router.post("/chat", response_model=ChatResponse)
-async def chat(req: ChatRequest):
+async def chat(req: ChatRequest, request: Request):
+    user = await get_current_user(request)
+    device_id = request.headers.get("x-device-id") or request.headers.get("X-Device-Id")
+
     # Get or create conversation
     convo_id = req.conversation_id
     if convo_id:
         convo_doc = await db.conversations.find_one({"id": convo_id}, {"_id": 0})
         if not convo_doc:
             raise HTTPException(status_code=404, detail="conversation_not_found")
-        convo = Conversation(**convo_doc)
+        convo = Conversation(**{k: v for k, v in convo_doc.items() if k in Conversation.model_fields})
     else:
         convo = Conversation()
-        await db.conversations.insert_one(convo.model_dump())
+        convo_dict = convo.model_dump()
+        convo_dict.update(_owner_fields(user, device_id))
+        await db.conversations.insert_one(convo_dict)
 
     # Save user message
     user_msg = Message(conversation_id=convo.id, role="user", content=req.message)
@@ -313,8 +505,13 @@ async def chat(req: ChatRequest):
 
 
 @api_router.get("/conversations")
-async def list_conversations():
-    docs = await db.conversations.find({}, {"_id": 0}).sort("updated_at", -1).to_list(500)
+async def list_conversations(request: Request):
+    user = await get_current_user(request)
+    device_id = request.headers.get("x-device-id") or request.headers.get("X-Device-Id")
+    query = _owner_query(user, device_id)
+    if query.get("_no_owner_"):
+        return []
+    docs = await db.conversations.find(query, {"_id": 0}).sort("updated_at", -1).to_list(500)
     return docs
 
 
@@ -413,7 +610,9 @@ def _scrub_hotline_refs(text: str) -> str:
 
 
 @api_router.post("/assessment-results", response_model=AssessmentResultOut)
-async def save_assessment_result(req: AssessmentResultIn):
+async def save_assessment_result(req: AssessmentResultIn, request: Request):
+    user = await get_current_user(request)
+    device_id = request.headers.get("x-device-id") or request.headers.get("X-Device-Id")
     result = {
         "id": str(uuid.uuid4()),
         "assessment_id": req.assessment_id,
@@ -427,14 +626,19 @@ async def save_assessment_result(req: AssessmentResultIn):
         "crisis_flag": req.crisis_flag,
         "narrative": req.narrative,
         "completed_at": now_iso(),
+        **_owner_fields(user, device_id),
     }
     await db.assessment_results.insert_one(result.copy())
     return AssessmentResultOut(**{k: v for k, v in result.items() if k != "raw_answers"})
 
 
 @api_router.get("/assessment-results")
-async def list_assessment_results(assessment_id: Optional[str] = None):
-    q = {}
+async def list_assessment_results(request: Request, assessment_id: Optional[str] = None):
+    user = await get_current_user(request)
+    device_id = request.headers.get("x-device-id") or request.headers.get("X-Device-Id")
+    q: Dict[str, Any] = _owner_query(user, device_id)
+    if q.get("_no_owner_"):
+        return []
     if assessment_id:
         q["assessment_id"] = assessment_id
     docs = await db.assessment_results.find(q, {"_id": 0, "raw_answers": 0}).sort("completed_at", -1).to_list(500)

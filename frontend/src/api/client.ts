@@ -1,4 +1,7 @@
-// API client for Kompas backend
+// API client for Kompas backend — auto-attaches Bearer token and X-Device-Id
+import { getToken } from "@/src/auth/tokenStore";
+import { getDeviceId } from "@/src/auth/deviceId";
+
 const BASE = process.env.EXPO_PUBLIC_BACKEND_URL;
 
 if (!BASE) {
@@ -7,14 +10,20 @@ if (!BASE) {
 
 const API = `${BASE}/api`;
 
+async function buildHeaders(extra: HeadersInit = {}): Promise<HeadersInit> {
+  const [token, deviceId] = await Promise.all([getToken(), getDeviceId()]);
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "X-Device-Id": deviceId,
+    ...(extra as Record<string, string>),
+  };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  return headers;
+}
+
 async function request<T>(path: string, opts: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${API}${path}`, {
-    ...opts,
-    headers: {
-      "Content-Type": "application/json",
-      ...(opts.headers || {}),
-    },
-  });
+  const headers = await buildHeaders(opts.headers);
+  const res = await fetch(`${API}${path}`, { ...opts, headers });
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`API ${res.status}: ${text}`);

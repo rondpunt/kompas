@@ -223,8 +223,10 @@ class TestAdminEndpoints:
 
 
 # ---------- Assessment results CRUD ----------
+# Iteration 3: device_id scoping is now enforced — save+list need same X-Device-Id.
 class TestAssessmentResults:
     rid = None
+    DEVICE_ID = "TEST_legacy_assessment_device"
 
     def test_save_result(self):
         payload = {
@@ -238,7 +240,12 @@ class TestAssessmentResults:
             "crisis_flag": False,
             "narrative": "TEST_narrative",
         }
-        r = session.post(f"{API}/assessment-results", json=payload, timeout=20)
+        r = session.post(
+            f"{API}/assessment-results",
+            json=payload,
+            headers={"X-Device-Id": self.DEVICE_ID},
+            timeout=20,
+        )
         assert r.status_code == 200, r.text
         j = r.json()
         assert "id" in j and "completed_at" in j
@@ -247,7 +254,12 @@ class TestAssessmentResults:
         TestAssessmentResults.rid = j["id"]
 
     def test_list_results_with_filter(self):
-        r = session.get(f"{API}/assessment-results", params={"assessment_id": "phq9"}, timeout=20)
+        r = session.get(
+            f"{API}/assessment-results",
+            params={"assessment_id": "phq9"},
+            headers={"X-Device-Id": self.DEVICE_ID},
+            timeout=20,
+        )
         assert r.status_code == 200
         arr = r.json()
         assert isinstance(arr, list)

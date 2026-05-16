@@ -1,9 +1,10 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Linking } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useRouter, Stack } from "expo-router";
 import { useTheme } from "@/src/theme/ThemeContext";
+import { useAuth } from "@/src/auth/AuthContext";
 
 const THEME_OPTIONS = [
   { id: "night", label: "Night" },
@@ -13,7 +14,27 @@ const THEME_OPTIONS = [
 
 export default function Settings() {
   const { palette, mode, setMode } = useTheme();
+  const { state, user, signIn, signOut } = useAuth();
   const router = useRouter();
+  const [loadingAuth, setLoadingAuth] = React.useState(false);
+
+  const handleSignIn = async () => {
+    setLoadingAuth(true);
+    try {
+      await signIn();
+    } finally {
+      setLoadingAuth(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    setLoadingAuth(true);
+    try {
+      await signOut();
+    } finally {
+      setLoadingAuth(false);
+    }
+  };
 
   return (
     <SafeAreaView style={[styles.root, { backgroundColor: palette.background }]}>
@@ -29,18 +50,78 @@ export default function Settings() {
       <ScrollView contentContainerStyle={styles.body} testID="settings-body">
         {/* Account section */}
         <Section title="Account" palette={palette}>
-          <Row label="Anoniem" palette={palette} testID="settings-account-row">
-            <Text style={[styles.rowValue, { color: palette.textMuted }]}>Geen e-mail</Text>
-          </Row>
+          {state.status === "loading" ? (
+            <View style={[styles.row, { borderBottomColor: palette.borderSubtle }]}>
+              <ActivityIndicator size="small" color={palette.accent} />
+            </View>
+          ) : user ? (
+            <>
+              <View style={[styles.profileRow, { borderBottomColor: palette.borderSubtle }]} testID="settings-profile">
+                {user.picture ? (
+                  <Image source={{ uri: user.picture }} style={styles.avatar} />
+                ) : (
+                  <View style={[styles.avatar, { backgroundColor: palette.surfaceHigher, alignItems: "center", justifyContent: "center" }]}>
+                    <Feather name="user" size={18} color={palette.textMuted} />
+                  </View>
+                )}
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <Text style={[styles.rowLabel, { color: palette.textPrimary }]} numberOfLines={1}>
+                    {user.name}
+                  </Text>
+                  <Text style={[styles.rowValue, { color: palette.textMuted }]} numberOfLines={1}>
+                    {user.email}
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                testID="settings-signout"
+                onPress={handleSignOut}
+                disabled={loadingAuth}
+                style={[styles.actionRow, { borderBottomColor: palette.borderSubtle, opacity: loadingAuth ? 0.5 : 1 }]}
+              >
+                <Feather name="log-out" size={16} color={palette.textPrimary} />
+                <Text style={[styles.rowLabel, { color: palette.textPrimary, marginLeft: 10 }]}>Uitloggen</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <View style={[styles.row, { borderBottomColor: palette.borderSubtle }]}>
+                <Text style={[styles.rowLabel, { color: palette.textPrimary }]}>Anoniem</Text>
+                <Text style={[styles.rowValue, { color: palette.textMuted }]}>Geen profiel</Text>
+              </View>
+              <TouchableOpacity
+                testID="settings-signin"
+                onPress={handleSignIn}
+                disabled={loadingAuth}
+                style={[styles.actionRow, { borderBottomColor: palette.borderSubtle, opacity: loadingAuth ? 0.5 : 1 }]}
+              >
+                {loadingAuth ? (
+                  <ActivityIndicator size="small" color={palette.accent} />
+                ) : (
+                  <Feather name="log-in" size={16} color={palette.accent} />
+                )}
+                <Text style={[styles.rowLabel, { color: palette.textPrimary, marginLeft: 10, flex: 1 }]}>
+                  Aanmelden met Google
+                </Text>
+                <Feather name="chevron-right" size={16} color={palette.textMuted} />
+              </TouchableOpacity>
+              <View style={[styles.hintRow]}>
+                <Text style={[styles.hintText, { color: palette.textMuted }]}>
+                  Optioneel — voor sync tussen toestellen en Plus tier
+                </Text>
+              </View>
+            </>
+          )}
         </Section>
 
         {/* Subscription section */}
         <Section title="Abonnement" palette={palette}>
-          <Row label="Huidige plan" palette={palette}>
+          <View style={[styles.row, { borderBottomColor: palette.borderSubtle }]}>
+            <Text style={[styles.rowLabel, { color: palette.textPrimary }]}>Huidige plan</Text>
             <View style={[styles.tierPill, { backgroundColor: palette.surfaceElevated, borderColor: palette.borderSubtle }]}>
               <Text style={[styles.tierPillText, { color: palette.textPrimary }]}>Gratis</Text>
             </View>
-          </Row>
+          </View>
           <TouchableOpacity testID="settings-upgrade" disabled style={[styles.upgradeBtn, { borderColor: palette.borderDefault, opacity: 0.7 }]}>
             <Feather name="zap" size={14} color={palette.accent} />
             <Text style={[styles.upgradeBtnText, { color: palette.textPrimary }]}>
@@ -82,19 +163,22 @@ export default function Settings() {
 
         {/* Language section */}
         <Section title="Taal" palette={palette}>
-          <Row label="Taal" palette={palette}>
+          <View style={[styles.row, { borderBottomColor: palette.borderSubtle }]}>
+            <Text style={[styles.rowLabel, { color: palette.textPrimary }]}>Taal</Text>
             <Text style={[styles.rowValue, { color: palette.textMuted }]}>Belgisch Nederlands</Text>
-          </Row>
+          </View>
         </Section>
 
         {/* About section */}
         <Section title="Over" palette={palette}>
-          <Row label="Versie" palette={palette}>
+          <View style={[styles.row, { borderBottomColor: palette.borderSubtle }]}>
+            <Text style={[styles.rowLabel, { color: palette.textPrimary }]}>Versie</Text>
             <Text style={[styles.rowValue, { color: palette.textMuted }]}>1.0.0</Text>
-          </Row>
-          <Row label="Bron-inspiratie" palette={palette}>
+          </View>
+          <View style={[styles.row, { borderBottomColor: palette.borderSubtle }]}>
+            <Text style={[styles.rowLabel, { color: palette.textPrimary }]}>Bron-inspiratie</Text>
             <Text style={[styles.rowValue, { color: palette.textMuted }]}>Borderline Times</Text>
-          </Row>
+          </View>
         </Section>
       </ScrollView>
 
@@ -114,15 +198,6 @@ function Section({ title, children, palette }: any) {
       <View style={[styles.sectionBox, { backgroundColor: palette.surfaceElevated, borderColor: palette.borderSubtle }]}>
         {children}
       </View>
-    </View>
-  );
-}
-
-function Row({ label, children, palette, testID }: any) {
-  return (
-    <View style={[styles.row, { borderBottomColor: palette.borderSubtle }]} testID={testID}>
-      <Text style={[styles.rowLabel, { color: palette.textPrimary }]}>{label}</Text>
-      {children}
     </View>
   );
 }
@@ -173,6 +248,33 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 14,
     borderBottomWidth: 0.5,
+  },
+  profileRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderBottomWidth: 0.5,
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  actionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    borderBottomWidth: 0.5,
+  },
+  hintRow: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  hintText: {
+    fontSize: 11.5,
+    lineHeight: 16,
   },
   radioRow: {
     flexDirection: "row",

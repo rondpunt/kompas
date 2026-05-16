@@ -141,9 +141,6 @@ export default function ChatScreen() {
         <TouchableOpacity
           testID="chat-new-pencil"
           onPress={() => {
-            if (messages.length > 0) {
-              setHandshakeVisible(true);
-            }
             setConversationId(null);
             setMessages([]);
             setDraft("");
