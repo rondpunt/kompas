@@ -388,11 +388,11 @@ class ClaimRequest(BaseModel):
 async def auth_claim(req: ClaimRequest, user: Dict[str, Any] = Depends(require_user)):
     """Link all anonymous conversations + results from device_id to this user."""
     convo_res = await db.conversations.update_many(
-        {"device_id": req.device_id, "user_id": {"$in": [None, "", None]}},
+        {"device_id": req.device_id, "$or": [{"user_id": None}, {"user_id": {"$exists": False}}]},
         {"$set": {"user_id": user["user_id"]}},
     )
     result_res = await db.assessment_results.update_many(
-        {"device_id": req.device_id, "user_id": {"$in": [None, "", None]}},
+        {"device_id": req.device_id, "$or": [{"user_id": None}, {"user_id": {"$exists": False}}]},
         {"$set": {"user_id": user["user_id"]}},
     )
     return {

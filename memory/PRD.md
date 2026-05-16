@@ -10,6 +10,13 @@
 - **Language**: Belgian Dutch only
 - **Auth**: Anonymous (no login) for v1 MVP
 
+## What's new in iteration 3
+- **Emergent-managed Google Auth** — optionele Google login via `https://auth.emergentagent.com`. Anonieme modus blijft de default; login alleen nodig voor sync tussen toestellen en (later) Plus tier.
+- **device_id scoping** — elke anonieme client krijgt een persistente UUID. Backend isoleert conversations en assessment-results per device_id zodat verschillende anonieme gebruikers elkaars data nooit zien.
+- **Auto-claim bij login** — bij eerste keer aanmelden worden alle anonieme gesprekken/resultaten van dit toestel automatisch aan het profiel gekoppeld (via `POST /api/auth/claim`).
+- **Settings ACCOUNT sectie** toont "Anoniem · Geen profiel" + "Aanmelden met Google" CTA voor anonieme gebruikers; profiel-avatar + naam + email + uitloggen-knop voor aangemelde gebruikers.
+- **Animation fix** — SecureHandshake speelt alleen nog bij cold launch, niet meer bij elke nieuwe chat.
+
 ## What's new in iteration 2
 - **Onboarding flow** (3 slides, first-launch only): Welkom ("Wat speelt er?"), Hoe werkt het ("Verwijlen, niet fixen"), Privé ("Wat je deelt blijft van jou").
 - **SecureHandshake animation** plays on cold launch + when starting a new conversation. Hex stream + lock icon + status progression ("Beveiligd kanaal opzetten" → "Sleutels uitwisselen" → "Sessie versleutelen" → "Klaar.").
