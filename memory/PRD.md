@@ -20,6 +20,7 @@ De app gebruikt Claude Sonnet via Emergent Universal Key.
 - ✅ In-chat profielvoorstellen met bevestiging: "Zal ik dit toevoegen aan je profiel?"
 - ✅ Geheugen-toggle toegevoegd in Profiel > Privacy (aan/uit)
 - ⚠️ Stripe checkout flow is technisch live-ready, maar echte betalingen vereisen een geldige Stripe API key en (optioneel) price IDs
+- ✅ Community launch-scope toegevoegd: anonieme mini-feed met auto/custom nickname, premium-gated posten en premium-gated DM routes
 
 ## Gebruikerspersona
 - Primair: Vlaamse/Belgische volwassenen die mentaal welzijn ondersteuning zoeken
@@ -52,3 +53,7 @@ De app gebruikt Claude Sonnet via Emergent Universal Key.
 - `POST /api/onboarding/quiz` (quiz-data opgeslagen bij afronden onboarding)
 - `GET/POST /api/profile/memory` (RAG context aan/uit)
 - `GET /api/profile/suggestions` + `POST /api/profile/suggestions/confirm` (AI-profielvoorstellen)
+- `GET /api/community/me` (anonieme community-identiteit + premium flags)
+- `POST /api/community/nickname` (nickname instellen)
+- `GET /api/community/feed` + `POST /api/community/posts` (mini-twitter feed)
+- `GET /api/community/dm/inbox` + `GET/POST /api/community/dm/thread/{peer_nickname}` (anonieme DM)

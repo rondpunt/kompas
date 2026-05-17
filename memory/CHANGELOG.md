@@ -74,3 +74,25 @@
 ### Bekende beperking
 - Huidige Stripe sleutel in omgeving (`sk_test_emergent`) wordt door Stripe als ongeldig afgewezen.
   Daarom blijft checkout momenteel in **fallback/mock** tot een geldige key beschikbaar is.
+
+## 2026-05-17 — Community Launch Scope (anonieme mini-twitter)
+
+### Gebouwd
+- Nieuwe community backend in `server.py`:
+  - `GET /api/community/me` (auto-anoniem profiel + premium flags)
+  - `POST /api/community/nickname` (custom nickname)
+  - `GET /api/community/feed` + `POST /api/community/posts`
+  - `GET /api/community/dm/inbox` + `GET/POST /api/community/dm/thread/{peer_nickname}`
+- Premium gating actief:
+  - **Free** = read-only
+  - **Premium/trialing** = posten + DM
+- Nieuwe frontend routes:
+  - `/community` (feed + nickname beheer + composer/paywall)
+  - `/community/inbox` (DM inbox)
+  - `/community/[peer]` (DM thread)
+
+### Teststatus
+- Testing agent: backend + frontend community scope geslaagd (8/8 backend tests + UI routes renderen correct)
+
+### Bekende beperking
+- Kanaal-leden/activiteit labels in community UI zijn momenteel **MOCKED** designdata (statisch), geen live aggregatie.

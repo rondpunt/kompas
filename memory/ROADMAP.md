@@ -12,6 +12,8 @@
 - [x] AI Background Extraction: "Zal ik dit aan je profiel toevoegen?" tijdens gesprek
 - [ ] Slimme openings-prompts op homescherm op basis van profiel
 - [ ] Notificatie-toestemming scherm (contextueel, na 3de dag actief gebruik)
+- [x] Community MVP: anonieme feed + premium-gated posten/DM + inbox/thread routes
+- [ ] Community verdieping: moderatie tooling, rapporteren/blokkeren, live statistieken i.p.v. statische labels
 
 ## P2 — Gemiddelde prioriteit
 - [ ] Insights-tab met wekelijkse synthese van gesprekken

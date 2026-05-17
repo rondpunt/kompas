@@ -1732,9 +1732,10 @@ async def _is_plus_member(user, device_id) -> bool:
         if sub and sub.get("status") in {"trialing", "active", "paid", "premium"}:
             return True
     if user:
+        uid = user.get("user_id")
         if user.get("plan") in {"plus", "premium", "active"}:
             return True
-        user_doc = await db.users.find_one({"id": user.get("user_id")}, {"_id": 0, "plan": 1})
+        user_doc = await db.users.find_one({"$or": [{"id": uid}, {"user_id": uid}]}, {"_id": 0, "plan": 1})
         if user_doc and user_doc.get("plan") in {"plus", "premium", "active"}:
             return True
     return False
