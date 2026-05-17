@@ -25,6 +25,9 @@ import { PlusModal } from "@/src/components/PlusModal";
 import { api, ApiMessage, ChatResponse } from "@/src/api/client";
 import { hasOnboarded } from "./onboarding";
 import { bumpMessageCount, dismissPlusHint, getUsage, UsageSnapshot } from "@/src/utils/usage";
+import { storage } from "@/src/utils/storage";
+
+const SECURITY_SHOWN_KEY = "kompas.security.first_shown";
 
 // Module-level flag so the handshake plays only once per app launch
 let coldLaunchHandshakeShown = false;
@@ -46,6 +49,7 @@ export default function ChatScreen() {
   const [sending, setSending] = useState(false);
   const [cursorVisible, setCursorVisible] = useState(true);
   const [handshakeVisible, setHandshakeVisible] = useState(!coldLaunchHandshakeShown);
+  const [handshakeVariant, setHandshakeVariant] = useState<"full" | "short">("short");
   const [onboardingChecked, setOnboardingChecked] = useState(false);
   const [usage, setUsage] = useState<UsageSnapshot | null>(null);
   const [showPlusModal, setShowPlusModal] = useState(false);
@@ -75,6 +79,13 @@ export default function ChatScreen() {
       if (!done) {
         router.replace("/onboarding");
         return;
+      }
+      // Determine handshake variant: first-install = full, otherwise = short
+      try {
+        const seen = await storage.getItem<boolean>(SECURITY_SHOWN_KEY, false);
+        setHandshakeVariant(seen ? "short" : "full");
+      } catch {
+        setHandshakeVariant("short");
       }
       setOnboardingChecked(true);
       const u = await getUsage();
@@ -430,9 +441,13 @@ export default function ChatScreen() {
 
       {handshakeVisible && (
         <SecureHandshake
-          onComplete={() => {
+          variant={handshakeVariant}
+          onComplete={async () => {
             coldLaunchHandshakeShown = true;
             setHandshakeVisible(false);
+            try {
+              await storage.setItem(SECURITY_SHOWN_KEY, true);
+            } catch {}
           }}
         />
       )}

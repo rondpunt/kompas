@@ -1,364 +1,474 @@
 import React, { useEffect, useRef, useState } from "react";
-import { View, Text, StyleSheet, Animated, Easing, Platform } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Animated,
+  Easing,
+  TouchableOpacity,
+  Platform,
+  AccessibilityInfo,
+} from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTheme } from "@/src/theme/ThemeContext";
 
 interface Props {
   onComplete: () => void;
-  /** total duration in ms (default 4200) */
-  duration?: number;
-  /** small variant uses smaller text/icons for inline use */
-  variant?: "full" | "inline";
+  /** "full" plays the 4.2s first-install version with a CTA the user must tap.
+   *  "short" plays a 1.1s cold-start variant that auto-dismisses. */
+  variant?: "full" | "short";
 }
 
-const HEX_CHARS = "0123456789abcdef";
+// Spec colors (kompas-veilig groen)
+const COLORS = {
+  primary: "#1d9e75",
+  primaryDark: "#0f6e56",
+  primaryLight: "#e1f5ee",
+  primaryLightSoft: "rgba(29, 158, 117, 0.08)",
+  ringStroke: "rgba(29, 158, 117, 0.35)",
+  glow: "rgba(29, 158, 117, 0.18)",
+  badgeBg: "rgba(29, 158, 117, 0.12)",
+  badgeText: "#0f6e56",
+};
 
-function randHex(length: number) {
-  let out = "";
-  for (let i = 0; i < length; i++) {
-    out += HEX_CHARS[Math.floor(Math.random() * HEX_CHARS.length)];
-  }
-  return out;
-}
+const STEPS = ["Verbinding beveiligd", "Sleutels aangemaakt", "Berichten versleuteld"];
 
-interface Stage {
-  /** progress 0..1 at which this stage begins */
-  t: number;
-  label: string;
-  /** technical log lines for this stage */
-  logs: string[];
-}
-
-const STAGES: Stage[] = [
-  {
-    t: 0,
-    label: "Beveiligd kanaal opzetten",
-    logs: [
-      "$ kompas-secure --init",
-      "› resolving endpoint ...",
-      "› endpoint OK · latency 38ms",
-      "› TLS 1.3 handshake initiated",
-    ],
-  },
-  {
-    t: 0.25,
-    label: "Sleutels uitwisselen",
-    logs: [
-      "› generating ephemeral keypair (X25519)",
-      "› ECDHE ...",
-      "› peer certificate verified",
-      "› shared secret derived",
-    ],
-  },
-  {
-    t: 0.55,
-    label: "Sessie versleutelen",
-    logs: [
-      "› cipher · AES-256-GCM",
-      "› HKDF-SHA256 session keys ok",
-      "› forward-secrecy enabled",
-      "› channel sealed",
-    ],
-  },
-  {
-    t: 0.85,
-    label: "Klaar",
-    logs: [
-      "› integrity verified",
-      "› identity · anoniem",
-      "✓ veilig · privé · end-to-end",
-    ],
-  },
-];
-
-export function SecureHandshake({ onComplete, duration = 1500, variant = "full" }: Props) {
+export function SecureHandshake({ onComplete, variant = "full" }: Props) {
   const { palette } = useTheme();
-  const [hexLines, setHexLines] = useState<string[]>([]);
-  const [logLines, setLogLines] = useState<string[]>([]);
-  const [stageIdx, setStageIdx] = useState(0);
-  const [progress, setProgress] = useState(0);
-  const [dots, setDots] = useState("");
-  const fade = useRef(new Animated.Value(0)).current;
-  const lockScale = useRef(new Animated.Value(0.85)).current;
-  const checkOpacity = useRef(new Animated.Value(0)).current;
-  const ringPulse = useRef(new Animated.Value(0)).current;
-  const progressAnim = useRef(new Animated.Value(0)).current;
+  const [stepDone, setStepDone] = useState<boolean[]>([false, false, false]);
+  const [ctaReady, setCtaReady] = useState(false);
+  const [reduceMotion, setReduceMotion] = useState(false);
   const startedRef = useRef(false);
 
-  const hexLineCount = variant === "inline" ? 2 : 4;
-  const hexLineLen = variant === "inline" ? 18 : 26;
+  // Animation values
+  const screenFade = useRef(new Animated.Value(0)).current;
+  const stepSlide0 = useRef(new Animated.Value(0)).current;
+  const stepSlide1 = useRef(new Animated.Value(0)).current;
+  const stepSlide2 = useRef(new Animated.Value(0)).current;
+  const stepSlides = [stepSlide0, stepSlide1, stepSlide2];
+  const progressW = useRef(new Animated.Value(0)).current;
+  const lockRotate = useRef(new Animated.Value(variant === "short" ? 0 : 1)).current; // 1=open, 0=closed
+  const lockY = useRef(new Animated.Value(variant === "short" ? 0 : 1)).current;
+  const lockIconLockOpacity = useRef(new Animated.Value(0)).current;
+  const ring1 = useRef(new Animated.Value(0)).current;
+  const ring2 = useRef(new Animated.Value(0)).current;
+  const ring3 = useRef(new Animated.Value(0)).current;
+  const glow = useRef(new Animated.Value(0)).current;
+  const badgeFade = useRef(new Animated.Value(0)).current;
+  const textFade = useRef(new Animated.Value(0)).current;
+  const subTextFade = useRef(new Animated.Value(0)).current;
+  const ctaFade = useRef(new Animated.Value(0)).current;
+  const ctaScale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     if (startedRef.current) return;
     startedRef.current = true;
 
-    // Initial fade-in
-    Animated.timing(fade, { toValue: 1, duration: 240, useNativeDriver: true }).start();
-    Animated.timing(lockScale, {
-      toValue: 1,
-      duration: 380,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start();
+    AccessibilityInfo.isReduceMotionEnabled?.().then((v) => setReduceMotion(!!v)).catch(() => {});
 
-    // Pulse ring loop
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(ringPulse, {
-          toValue: 1,
-          duration: 1400,
-          easing: Easing.out(Easing.quad),
-          useNativeDriver: true,
-        }),
-        Animated.timing(ringPulse, {
-          toValue: 0,
-          duration: 0,
-          useNativeDriver: true,
-        }),
-      ]),
-    ).start();
-
-    // Progress bar 0→1 over duration
-    Animated.timing(progressAnim, {
-      toValue: 1,
-      duration: duration,
-      easing: Easing.linear,
-      useNativeDriver: false,
-    }).start();
-    const progressListener = progressAnim.addListener(({ value }) => {
-      setProgress(value);
-    });
-
-    // Hex stream tick
-    const tickHex = setInterval(() => {
-      const arr: string[] = [];
-      for (let i = 0; i < hexLineCount; i++) {
-        arr.push(randHex(hexLineLen).replace(/(.{4})/g, "$1 ").trim());
-      }
-      setHexLines(arr);
-    }, 85);
-
-    // Dots animation
-    const dotPattern = ["", ".", "..", "..."];
-    let dotI = 0;
-    const tickDots = setInterval(() => {
-      setDots(dotPattern[dotI % dotPattern.length]);
-      dotI++;
-    }, 300);
-
-    // Push log lines progressively
-    let allLogs: { stage: number; line: string; at: number }[] = [];
-    STAGES.forEach((stg, si) => {
-      const stageStart = stg.t * duration;
-      const stageEnd = (si === STAGES.length - 1 ? 1 : STAGES[si + 1].t) * duration;
-      const slotW = (stageEnd - stageStart) / Math.max(1, stg.logs.length);
-      stg.logs.forEach((line, li) => {
-        allLogs.push({ stage: si, line, at: stageStart + li * slotW + slotW * 0.25 });
-      });
-    });
-    const logTimers = allLogs.map((entry) =>
-      setTimeout(() => {
-        setLogLines((prev) => {
-          // keep last 6 only
-          const next = [...prev, entry.line];
-          return next.slice(Math.max(0, next.length - 6));
-        });
-      }, entry.at),
-    );
-
-    // Stage progression
-    const stageTimers = STAGES.map((s, i) =>
-      setTimeout(() => setStageIdx(i), s.t * duration),
-    );
-
-    // Final lock check
-    const checkTimer = setTimeout(() => {
-      Animated.timing(checkOpacity, {
-        toValue: 1,
-        duration: 320,
-        useNativeDriver: true,
-      }).start();
-    }, duration * 0.85);
-
-    // Completion fade out
-    const fadeOutTimer = setTimeout(() => {
-      Animated.timing(fade, {
-        toValue: 0,
-        duration: 320,
-        useNativeDriver: true,
-      }).start(() => onComplete());
-    }, duration);
-
-    return () => {
-      clearInterval(tickHex);
-      clearInterval(tickDots);
-      logTimers.forEach(clearTimeout);
-      stageTimers.forEach(clearTimeout);
-      clearTimeout(checkTimer);
-      clearTimeout(fadeOutTimer);
-      progressAnim.removeListener(progressListener);
-    };
+    if (variant === "short") {
+      runShort();
+    } else {
+      runFull();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const lockSize = variant === "inline" ? 28 : 52;
-  const currentLabel = STAGES[stageIdx]?.label ?? "";
-  const isFinal = stageIdx === STAGES.length - 1;
-  const pct = Math.min(100, Math.round(progress * 100));
+  // ─── Full version (4.2 s with CTA) ────────────────────────────────
+  const runFull = () => {
+    // 0–400ms: scherm fade-in
+    Animated.timing(screenFade, {
+      toValue: 1,
+      duration: 400,
+      useNativeDriver: true,
+    }).start();
 
-  const ringScale = ringPulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.55] });
-  const ringOpacity = ringPulse.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0.45, 0.25, 0] });
+    // 400–1000ms: drie stap-pills schuiven van links naar rechts (staggered 100ms)
+    setTimeout(() => {
+      stepSlides.forEach((sv, i) => {
+        Animated.timing(sv, {
+          toValue: 1,
+          duration: 350,
+          delay: i * 100,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }).start();
+      });
+    }, 400);
+
+    // 1000ms, 1700ms, 2400ms: stappen worden groen + vinkje, balk vult mee
+    [1000, 1700, 2400].forEach((t, i) => {
+      setTimeout(() => {
+        setStepDone((prev) => {
+          const next = [...prev];
+          next[i] = true;
+          return next;
+        });
+        Animated.timing(progressW, {
+          toValue: (i + 1) / 3,
+          duration: 600,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: false,
+        }).start();
+      }, t);
+    });
+
+    // 2400–2900ms: slot sluit met verende animatie
+    setTimeout(() => {
+      Animated.parallel([
+        Animated.spring(lockRotate, {
+          toValue: 0,
+          tension: 80,
+          friction: 5,
+          useNativeDriver: true,
+        }),
+        Animated.spring(lockY, {
+          toValue: 0,
+          tension: 80,
+          friction: 5,
+          useNativeDriver: true,
+        }),
+        Animated.timing(lockIconLockOpacity, {
+          toValue: 1,
+          duration: 280,
+          delay: 100,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }, 2400);
+
+    // 2900–3600ms: pulse-ringen + achtergrond-gloed + badge
+    setTimeout(() => {
+      [ring1, ring2, ring3].forEach((rv, i) => {
+        setTimeout(() => {
+          Animated.timing(rv, {
+            toValue: 1,
+            duration: 1400,
+            easing: Easing.out(Easing.quad),
+            useNativeDriver: true,
+          }).start();
+        }, i * 350);
+      });
+      Animated.spring(glow, {
+        toValue: 1,
+        tension: 25,
+        friction: 5,
+        useNativeDriver: true,
+      }).start();
+      Animated.timing(badgeFade, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }).start();
+    }, 2900);
+
+    // 3600–4200ms: hoofd- + subtekst, daarna CTA
+    setTimeout(() => {
+      Animated.timing(textFade, {
+        toValue: 1,
+        duration: 450,
+        useNativeDriver: true,
+      }).start();
+      setTimeout(() => {
+        Animated.timing(subTextFade, {
+          toValue: 1,
+          duration: 450,
+          useNativeDriver: true,
+        }).start();
+      }, 150);
+      Animated.timing(ctaFade, {
+        toValue: 1,
+        duration: 500,
+        delay: 300,
+        useNativeDriver: true,
+      }).start();
+    }, 3600);
+
+    // 4200ms: CTA klikbaar
+    setTimeout(() => setCtaReady(true), 4200);
+  };
+
+  // ─── Short version (≈1.1 s, auto-dismiss) ─────────────────────────
+  const runShort = () => {
+    Animated.timing(screenFade, {
+      toValue: 1,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+    // Slot sluit meteen
+    Animated.parallel([
+      Animated.spring(lockRotate, { toValue: 0, tension: 80, friction: 5, useNativeDriver: true }),
+      Animated.spring(lockY, { toValue: 0, tension: 80, friction: 5, useNativeDriver: true }),
+      Animated.timing(lockIconLockOpacity, {
+        toValue: 1,
+        duration: 280,
+        delay: 100,
+        useNativeDriver: true,
+      }),
+    ]).start();
+    // Badge na 500ms
+    setTimeout(() => {
+      Animated.timing(badgeFade, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }, 500);
+    // Subtekst-fade na 800ms
+    setTimeout(() => {
+      Animated.timing(subTextFade, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }, 800);
+    // Dismiss na 1100ms (totaal ~1.1s)
+    setTimeout(() => {
+      Animated.timing(screenFade, {
+        toValue: 0,
+        duration: 220,
+        useNativeDriver: true,
+      }).start(() => onComplete());
+    }, 1100);
+  };
+
+  // ─── Press handler — CTA, full version only ──────────────────────
+  const handleCtaPress = () => {
+    if (!ctaReady) return;
+    Animated.sequence([
+      Animated.timing(ctaScale, { toValue: 0.96, duration: 90, useNativeDriver: true }),
+      Animated.timing(ctaScale, { toValue: 1, duration: 110, useNativeDriver: true }),
+    ]).start();
+    Animated.timing(screenFade, {
+      toValue: 0,
+      duration: 240,
+      useNativeDriver: true,
+    }).start(() => onComplete());
+  };
+
+  // ─── Derived animated values ─────────────────────────────────────
+  const lockRotateDeg = lockRotate.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "-8deg"],
+  });
+  const lockTranslateY = lockY.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -10],
+  });
+
+  const ringStyle = (rv: Animated.Value) => ({
+    transform: [
+      {
+        scale: rv.interpolate({ inputRange: [0, 1], outputRange: [0.8, 3.5] }),
+      },
+    ],
+    opacity: rv.interpolate({ inputRange: [0, 0.2, 1], outputRange: [0, 0.55, 0] }),
+  });
+
+  const glowStyle = {
+    opacity: glow.interpolate({ inputRange: [0, 1], outputRange: [0, 0.45] }),
+    transform: [
+      {
+        scale: glow.interpolate({ inputRange: [0, 1], outputRange: [0, 1] }),
+      },
+    ],
+  };
 
   return (
     <Animated.View
       style={[
         StyleSheet.absoluteFill,
         styles.root,
-        { backgroundColor: palette.background, opacity: fade },
+        {
+          opacity: screenFade,
+          backgroundColor: palette.background,
+        },
       ]}
       pointerEvents="auto"
       testID="secure-handshake"
+      accessibilityLabel="Beveiliging actief"
     >
       <View style={styles.content}>
-        {/* Lock icon with pulse ring and check overlay */}
-        <Animated.View style={[styles.lockWrap, { transform: [{ scale: lockScale }] }]}>
+        {/* Background glow + ringen rondom slot */}
+        <View style={styles.lockStack}>
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.glow, glowStyle]}
+          />
+          <Animated.View style={[styles.ring, ringStyle(ring1)]} pointerEvents="none" />
+          <Animated.View style={[styles.ring, ringStyle(ring2)]} pointerEvents="none" />
+          <Animated.View style={[styles.ring, ringStyle(ring3)]} pointerEvents="none" />
+
           <Animated.View
             style={[
-              styles.pulseRing,
+              styles.lockHolder,
               {
-                width: lockSize + 80,
-                height: lockSize + 80,
-                borderRadius: (lockSize + 80) / 2,
-                borderColor: palette.accent,
-                transform: [{ scale: ringScale }],
-                opacity: ringOpacity,
-              },
-            ]}
-          />
-          <View
-            style={[
-              styles.lockCircle,
-              {
-                width: lockSize + 32,
-                height: lockSize + 32,
-                borderRadius: (lockSize + 32) / 2,
-                borderColor: palette.accent + "55",
-                backgroundColor: palette.surfaceElevated,
+                transform: [{ translateY: lockTranslateY }, { rotate: lockRotateDeg }],
               },
             ]}
           >
-            <Feather
-              name={isFinal ? "lock" : "shield"}
-              size={lockSize / 1.8}
-              color={isFinal ? palette.accent : palette.textSecondary}
-            />
-            <Animated.View style={[styles.checkBadge, { opacity: checkOpacity }]}>
-              <View
-                style={[
-                  styles.checkDot,
-                  { backgroundColor: palette.accent, borderColor: palette.background },
-                ]}
-              >
-                <Feather name="check" size={11} color="#0a0a0a" />
-              </View>
-            </Animated.View>
-          </View>
-        </Animated.View>
+            <View style={styles.lockIconWrap}>
+              <Feather name="unlock" size={48} color={COLORS.primary} />
+              <Animated.View style={[StyleSheet.absoluteFill, styles.lockIconLockOverlay, { opacity: lockIconLockOpacity }]}>
+                <Feather name="lock" size={48} color={COLORS.primary} />
+              </Animated.View>
+            </View>
+          </Animated.View>
 
-        {/* Hex stream */}
-        <View style={styles.streamBox}>
-          {hexLines.map((line, i) => (
-            <Text
-              key={i}
-              style={[
-                styles.hexLine,
-                {
-                  color: i === 0 ? palette.accent : palette.textFaint,
-                  opacity: 1 - i * 0.18,
-                },
-              ]}
-              numberOfLines={1}
-            >
-              {line}
-            </Text>
-          ))}
-        </View>
-
-        {/* Log lines (terminal-style) */}
-        <View
-          style={[
-            styles.logBox,
-            {
-              backgroundColor: palette.surfaceElevated,
-              borderColor: palette.borderSubtle,
-            },
-          ]}
-          testID="secure-handshake-log"
-        >
-          {logLines.length === 0 ? (
-            <Text style={[styles.logLine, { color: palette.textFaint }]}>$ kompas-secure --init</Text>
-          ) : (
-            logLines.map((l, i) => {
-              const isCmd = l.startsWith("$");
-              const isOk = l.startsWith("✓");
-              return (
-                <Text
-                  key={`${i}-${l}`}
-                  style={[
-                    styles.logLine,
-                    {
-                      color: isOk
-                        ? palette.success
-                        : isCmd
-                        ? palette.textSecondary
-                        : palette.textMuted,
-                    },
-                  ]}
-                  numberOfLines={1}
-                >
-                  {l}
-                </Text>
-              );
-            })
-          )}
-        </View>
-
-        {/* Progress bar */}
-        <View
-          style={[
-            styles.progressTrack,
-            { backgroundColor: palette.surfaceHigher },
-          ]}
-        >
-          <View
+          {/* Badge rechtsboven */}
+          <Animated.View
             style={[
-              styles.progressFill,
+              styles.badge,
               {
-                width: `${pct}%`,
-                backgroundColor: palette.accent,
+                opacity: badgeFade,
+                backgroundColor: COLORS.badgeBg,
+                borderColor: COLORS.primary + "33",
               },
             ]}
-          />
+          >
+            <Feather name="shield" size={10} color={COLORS.badgeText} />
+            <Text style={[styles.badgeText, { color: COLORS.badgeText }]}>End-to-end versleuteld</Text>
+          </Animated.View>
         </View>
 
-        {/* Status row */}
-        <View style={styles.statusRow}>
-          <View
-            style={[
-              styles.statusDot,
-              { backgroundColor: isFinal ? palette.success : palette.accent },
-            ]}
-          />
-          <Text style={[styles.statusText, { color: palette.textPrimary }]} testID="secure-handshake-status">
-            {currentLabel}
-            {!isFinal && dots}
+        {/* Volledige variant: stap-pills + voortgangsbalk */}
+        {variant === "full" && (
+          <>
+            <View style={styles.stepsWrap}>
+              {STEPS.map((label, i) => {
+                const done = stepDone[i];
+                return (
+                  <Animated.View
+                    key={i}
+                    style={[
+                      styles.stepPill,
+                      {
+                        opacity: stepSlides[i],
+                        transform: [
+                          {
+                            translateX: stepSlides[i].interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [-30, 0],
+                            }),
+                          },
+                        ],
+                        backgroundColor: done ? COLORS.primaryLight : palette.surfaceElevated,
+                        borderColor: done ? COLORS.primary + "44" : palette.borderSubtle,
+                      },
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.stepDot,
+                        { backgroundColor: done ? COLORS.primary : palette.borderEmphasis },
+                      ]}
+                    >
+                      {done ? (
+                        <Feather name="check" size={11} color="#ffffff" />
+                      ) : (
+                        <Text style={styles.stepIndex}>{i + 1}</Text>
+                      )}
+                    </View>
+                    <Text
+                      style={[
+                        styles.stepText,
+                        { color: done ? COLORS.primaryDark : palette.textPrimary },
+                      ]}
+                    >
+                      {label}
+                    </Text>
+                  </Animated.View>
+                );
+              })}
+            </View>
+
+            <View style={[styles.progressTrack, { backgroundColor: palette.surfaceHigher }]}>
+              <Animated.View
+                style={[
+                  styles.progressFill,
+                  {
+                    backgroundColor: COLORS.primary,
+                    width: progressW.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ["0%", "100%"],
+                    }),
+                  },
+                ]}
+              />
+            </View>
+          </>
+        )}
+
+        {/* Hoofdtekst */}
+        <Animated.View
+          style={[
+            styles.textBlock,
+            {
+              opacity: textFade,
+              transform: [
+                {
+                  translateY: textFade.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [10, 0],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          <Text style={[styles.headTitle, { color: palette.textPrimary }]}>
+            Jouw berichten zijn afgeschermd
           </Text>
-          <Text style={[styles.statusPct, { color: palette.textMuted }]}>{pct}%</Text>
-        </View>
+        </Animated.View>
 
-        <Text style={[styles.subStatus, { color: palette.textFaint }]}>
-          End-to-end · AES-256-GCM · privé
-        </Text>
+        {/* Subtekst — komt iets later, ook in short variant */}
+        <Animated.View
+          style={[
+            styles.subTextBlock,
+            {
+              opacity: subTextFade,
+              transform: [
+                {
+                  translateY: subTextFade.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [10, 0],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          <Text style={[styles.subText, { color: palette.textMuted }]}>
+            Alleen jij kunt ze lezen. Niemand anders — ook wij niet.
+          </Text>
+        </Animated.View>
+
+        {/* CTA — alleen in full variant */}
+        {variant === "full" && (
+          <Animated.View
+            style={[
+              styles.ctaWrap,
+              { opacity: ctaFade, transform: [{ scale: ctaScale }] },
+            ]}
+            pointerEvents={ctaReady ? "auto" : "none"}
+          >
+            <TouchableOpacity
+              testID="secure-handshake-cta"
+              activeOpacity={0.85}
+              onPress={handleCtaPress}
+              disabled={!ctaReady}
+              style={[
+                styles.ctaBtn,
+                {
+                  backgroundColor: COLORS.primary,
+                  opacity: ctaReady ? 1 : 0.4,
+                },
+              ]}
+            >
+              <Text style={styles.ctaText}>Veilig verder</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        )}
       </View>
     </Animated.View>
   );
@@ -369,100 +479,170 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     zIndex: 50,
+    paddingHorizontal: 28,
   },
   content: {
-    alignItems: "center",
-    paddingHorizontal: 28,
     width: "100%",
-    maxWidth: 460,
+    maxWidth: 380,
+    alignItems: "center",
   },
-  lockWrap: {
-    marginBottom: 26,
+  lockStack: {
+    width: 200,
+    height: 200,
     alignItems: "center",
     justifyContent: "center",
+    marginBottom: 28,
   },
-  pulseRing: {
+  glow: {
     position: "absolute",
-    borderWidth: 1,
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    backgroundColor: COLORS.glow,
   },
-  lockCircle: {
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-  },
-  checkBadge: {
+  ring: {
     position: "absolute",
-    bottom: -2,
-    right: -2,
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    borderWidth: 1.5,
+    borderColor: COLORS.ringStroke,
   },
-  checkDot: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2.5,
+  lockHolder: {
+    width: 84,
+    height: 84,
+    borderRadius: 22,
+    backgroundColor: COLORS.primaryLight,
+    borderWidth: 1,
+    borderColor: COLORS.primary + "33",
+    alignItems: "center",
+    justifyContent: "center",
+    ...Platform.select({
+      ios: {
+        shadowColor: COLORS.primary,
+        shadowOpacity: 0.35,
+        shadowRadius: 12,
+        shadowOffset: { width: 0, height: 4 },
+      },
+      android: { elevation: 4 },
+    }),
+  },
+  lockIconWrap: {
+    width: 50,
+    height: 50,
     alignItems: "center",
     justifyContent: "center",
   },
-  streamBox: {
+  lockIconLockOverlay: {
     alignItems: "center",
-    marginBottom: 18,
-    minHeight: 60,
+    justifyContent: "center",
   },
-  hexLine: {
-    fontFamily: Platform.select({ ios: "Courier", android: "monospace" }),
-    fontSize: 12,
-    lineHeight: 16,
-    letterSpacing: 1,
-  },
-  logBox: {
-    width: "100%",
+  badge: {
+    position: "absolute",
+    top: 0,
+    right: -10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
     borderWidth: 0.5,
-    borderRadius: 10,
-    padding: 10,
-    minHeight: 96,
-    marginBottom: 16,
   },
-  logLine: {
-    fontFamily: Platform.select({ ios: "Courier", android: "monospace" }),
-    fontSize: 11,
-    lineHeight: 16,
+  badgeText: {
+    fontSize: 10.5,
+    fontWeight: "500",
     letterSpacing: 0.2,
+  },
+  stepsWrap: {
+    width: "100%",
+    gap: 8,
+    marginBottom: 14,
+  },
+  stepPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 0.5,
+  },
+  stepDot: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stepIndex: {
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: "600",
+  },
+  stepText: {
+    fontSize: 13.5,
+    fontWeight: "500",
+    flex: 1,
   },
   progressTrack: {
     width: "100%",
-    height: 3,
-    borderRadius: 1.5,
+    height: 4,
+    borderRadius: 2,
     overflow: "hidden",
-    marginBottom: 14,
+    marginBottom: 24,
   },
   progressFill: {
-    height: 3,
-    borderRadius: 1.5,
+    height: 4,
+    borderRadius: 2,
   },
-  statusRow: {
-    flexDirection: "row",
+  textBlock: {
+    width: "100%",
     alignItems: "center",
-    gap: 8,
   },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+  headTitle: {
+    fontSize: 20,
+    fontWeight: "500",
+    letterSpacing: -0.2,
+    textAlign: "center",
+    marginBottom: 8,
   },
-  statusText: {
+  subTextBlock: {
+    width: "100%",
+    alignItems: "center",
+  },
+  subText: {
+    fontSize: 14,
+    lineHeight: 22,
+    textAlign: "center",
+    paddingHorizontal: 6,
+  },
+  ctaWrap: {
+    marginTop: 24,
+    width: "100%",
+    maxWidth: 280,
+    alignItems: "center",
+  },
+  ctaBtn: {
+    width: "100%",
+    height: 48,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    ...Platform.select({
+      ios: {
+        shadowColor: COLORS.primary,
+        shadowOpacity: 0.35,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 4 },
+      },
+      android: { elevation: 3 },
+    }),
+  },
+  ctaText: {
+    color: "#ffffff",
+    fontSize: 15,
     fontWeight: "500",
     letterSpacing: 0.2,
-    fontSize: 13,
-  },
-  statusPct: {
-    fontFamily: Platform.select({ ios: "Courier", android: "monospace" }),
-    fontSize: 11.5,
-    marginLeft: 4,
-  },
-  subStatus: {
-    marginTop: 12,
-    fontSize: 10.5,
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
   },
 });
