@@ -6,6 +6,7 @@ import os
 import logging
 import httpx
 import json
+import random
 from pathlib import Path
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
@@ -44,6 +45,10 @@ STRIPE_PRICE_MONTHLY = os.environ.get('STRIPE_PRICE_MONTHLY', '')
 STRIPE_PRICE_ANNUAL = os.environ.get('STRIPE_PRICE_ANNUAL', '')
 STRIPE_MONTHLY_AMOUNT_CENTS = int(os.environ.get('STRIPE_MONTHLY_AMOUNT_CENTS', '1299'))
 STRIPE_ANNUAL_AMOUNT_CENTS = int(os.environ.get('STRIPE_ANNUAL_AMOUNT_CENTS', '11999'))
+
+COMMUNITY_CHANNEL_IDS = {"adhd", "autisme", "burnout", "depressie", "angst", "hsp", "verlies", "relaties", "algemeen"}
+COMMUNITY_NICK_ADJECTIVES = ["Stille", "Warme", "Zachte", "Dappere", "Heldere", "Kalm", "Echte", "Open", "Rustige", "Lichte"]
+COMMUNITY_NICK_NOUNS = ["Vos", "Maan", "Storm", "Reiger", "Oever", "Komeet", "Spar", "Gloed", "Vlinder", "Golf"]
 
 # Configure logging
 logging.basicConfig(
@@ -1657,6 +1662,246 @@ class OnboardingQuizRequest(BaseModel):
     intentions: List[str] = []
     mood: Optional[str] = None
     therapy_experience: Optional[str] = None
+
+
+class CommunityNicknameRequest(BaseModel):
+    nickname: str
+
+
+class CommunityPostCreateRequest(BaseModel):
+    content: str
+    channel: str = "algemeen"
+
+
+class CommunityDMCreateRequest(BaseModel):
+    text: str
+
+
+def _community_owner_info(user, device_id):
+    owner_user_id = user.get("user_id") if user else None
+    owner_device_id = device_id if not user else None
+    owner_key = owner_user_id or (f"anon:{owner_device_id}" if owner_device_id else None)
+    q = {"owner_user_id": owner_user_id} if owner_user_id else {"owner_device_id": owner_device_id, "owner_user_id": None}
+    return owner_user_id, owner_device_id, owner_key, q
+
+
+def _clean_nickname(raw: str) -> str:
+    cleaned = "".join(ch for ch in (raw or "") if ch.isalnum() or ch in {"_", "-"}).strip()
+    return cleaned[:24]
+
+
+async def _generate_unique_nickname() -> str:
+    for _ in range(40):
+        nick = f"{random.choice(COMMUNITY_NICK_ADJECTIVES)}{random.choice(COMMUNITY_NICK_NOUNS)}{random.randint(100, 999)}"
+        exists = await db.community_profiles.find_one({"nickname": nick}, {"_id": 1})
+        if not exists:
+            return nick
+    return f"Kompas{random.randint(1000, 9999)}"
+
+
+async def _ensure_community_profile(user, device_id):
+    owner_user_id, owner_device_id, owner_key, q = _community_owner_info(user, device_id)
+    if not owner_key:
+        raise HTTPException(status_code=400, detail="no_owner")
+    doc = await db.community_profiles.find_one(q, {"_id": 0})
+    if doc:
+        return doc
+    nickname = await _generate_unique_nickname()
+    fresh = {
+        "id": str(uuid.uuid4()),
+        "owner_user_id": owner_user_id,
+        "owner_device_id": owner_device_id,
+        "owner_key": owner_key,
+        "nickname": nickname,
+        "created_at": now_iso(),
+        "updated_at": now_iso(),
+    }
+    await db.community_profiles.insert_one(fresh)
+    return fresh
+
+
+async def _is_plus_member(user, device_id) -> bool:
+    owner_user_id, owner_device_id, _, _ = _community_owner_info(user, device_id)
+    sub_q: Dict[str, Any] = {"_no_owner_": True}
+    if owner_user_id:
+        sub_q = {"$or": [{"owner_user_id": owner_user_id}, {"user_id": owner_user_id}]}
+    elif owner_device_id:
+        sub_q = {"$or": [{"owner_device_id": owner_device_id, "owner_user_id": None}, {"device_id": owner_device_id}]}
+    if not sub_q.get("_no_owner_"):
+        sub = await db.subscriptions.find_one(sub_q, {"_id": 0}, sort=[("updated_at", -1)])
+        if sub and sub.get("status") in {"trialing", "active", "paid", "premium"}:
+            return True
+    if user:
+        if user.get("plan") in {"plus", "premium", "active"}:
+            return True
+        user_doc = await db.users.find_one({"id": user.get("user_id")}, {"_id": 0, "plan": 1})
+        if user_doc and user_doc.get("plan") in {"plus", "premium", "active"}:
+            return True
+    return False
+
+
+async def _send_community_dm(*, user, device_id, peer_nickname: str, text: str):
+    profile = await _ensure_community_profile(user, device_id)
+    my_nickname = profile.get("nickname")
+    peer = await db.community_profiles.find_one({"nickname": peer_nickname}, {"_id": 0})
+    if not peer:
+        raise HTTPException(status_code=404, detail="peer_not_found")
+    if peer_nickname == my_nickname:
+        raise HTTPException(status_code=400, detail="cannot_dm_self")
+    body = text.strip()
+    if not body:
+        raise HTTPException(status_code=400, detail="empty_message")
+    if len(body) > 800:
+        raise HTTPException(status_code=400, detail="message_too_long")
+    participants = sorted([my_nickname, peer_nickname])
+    msg = {
+        "id": str(uuid.uuid4()),
+        "participants": participants,
+        "from_nickname": my_nickname,
+        "to_nickname": peer_nickname,
+        "text": body,
+        "created_at": now_iso(),
+        "read_by": [my_nickname],
+    }
+    await db.community_messages.insert_one(msg)
+    return msg
+
+
+@api_router.get("/community/me")
+async def get_community_me(request: Request):
+    user = await get_current_user(request)
+    device_id = request.headers.get("x-device-id") or request.headers.get("X-Device-Id")
+    profile = await _ensure_community_profile(user, device_id)
+    is_plus = await _is_plus_member(user, device_id)
+    return {
+        "nickname": profile.get("nickname"),
+        "is_premium": is_plus,
+        "can_post": is_plus,
+        "can_dm": is_plus,
+    }
+
+
+@api_router.post("/community/nickname")
+async def set_community_nickname(body: CommunityNicknameRequest, request: Request):
+    user = await get_current_user(request)
+    device_id = request.headers.get("x-device-id") or request.headers.get("X-Device-Id")
+    profile = await _ensure_community_profile(user, device_id)
+    nickname = _clean_nickname(body.nickname)
+    if len(nickname) < 3:
+        raise HTTPException(status_code=400, detail="nickname_too_short")
+    exists = await db.community_profiles.find_one({"nickname": nickname, "id": {"$ne": profile.get("id")}}, {"_id": 1})
+    if exists:
+        raise HTTPException(status_code=409, detail="nickname_taken")
+    owner_user_id, owner_device_id, _, q = _community_owner_info(user, device_id)
+    await db.community_profiles.update_one(
+        q,
+        {"$set": {
+            "nickname": nickname,
+            "owner_user_id": owner_user_id,
+            "owner_device_id": owner_device_id,
+            "updated_at": now_iso(),
+        }},
+        upsert=True,
+    )
+    return {"ok": True, "nickname": nickname}
+
+
+@api_router.get("/community/feed")
+async def get_community_feed(limit: int = 40, channel: Optional[str] = None):
+    safe_limit = max(1, min(limit, 100))
+    q: Dict[str, Any] = {}
+    if channel and channel != "all":
+        q["channel"] = channel
+    docs = await db.community_posts.find(q, {"_id": 0}).sort("created_at", -1).limit(safe_limit).to_list(safe_limit)
+    return docs
+
+
+@api_router.post("/community/posts")
+async def create_community_post(body: CommunityPostCreateRequest, request: Request):
+    user = await get_current_user(request)
+    device_id = request.headers.get("x-device-id") or request.headers.get("X-Device-Id")
+    if not await _is_plus_member(user, device_id):
+        raise HTTPException(status_code=402, detail="plus_required")
+    profile = await _ensure_community_profile(user, device_id)
+    content = body.content.strip()
+    if not content:
+        raise HTTPException(status_code=400, detail="empty_post")
+    if len(content) > 1500:
+        raise HTTPException(status_code=400, detail="post_too_long")
+    channel = (body.channel or "algemeen").strip().lower()
+    if channel not in COMMUNITY_CHANNEL_IDS:
+        channel = "algemeen"
+    owner_user_id, owner_device_id, _, _ = _community_owner_info(user, device_id)
+    post = {
+        "id": str(uuid.uuid4()),
+        "author_nickname": profile.get("nickname"),
+        "author_owner_user_id": owner_user_id,
+        "author_owner_device_id": owner_device_id,
+        "channel": channel,
+        "content": content,
+        "created_at": now_iso(),
+        "replies": 0,
+        "likes": 0,
+    }
+    await db.community_posts.insert_one(post)
+    safe_post = {
+        k: v
+        for k, v in post.items()
+        if k not in {"_id", "author_owner_user_id", "author_owner_device_id"}
+    }
+    return safe_post
+
+
+@api_router.get("/community/dm/inbox")
+async def get_community_dm_inbox(request: Request):
+    user = await get_current_user(request)
+    device_id = request.headers.get("x-device-id") or request.headers.get("X-Device-Id")
+    profile = await _ensure_community_profile(user, device_id)
+    my_nickname = profile.get("nickname")
+    docs = await db.community_messages.find({"participants": my_nickname}, {"_id": 0}).sort("created_at", -1).limit(300).to_list(300)
+    threads: Dict[str, Dict[str, Any]] = {}
+    for d in docs:
+        participants = d.get("participants", [])
+        if len(participants) != 2:
+            continue
+        peer = participants[0] if participants[1] == my_nickname else participants[1]
+        if peer not in threads:
+            threads[peer] = {
+                "peer_nickname": peer,
+                "last_message": d.get("text", ""),
+                "last_at": d.get("created_at"),
+                "unread": 0,
+            }
+        if d.get("to_nickname") == my_nickname and my_nickname not in (d.get("read_by") or []):
+            threads[peer]["unread"] += 1
+    out = list(threads.values())
+    out.sort(key=lambda t: t.get("last_at") or "", reverse=True)
+    return out
+
+
+@api_router.get("/community/dm/thread/{peer_nickname}")
+async def get_community_dm_thread(peer_nickname: str, request: Request):
+    user = await get_current_user(request)
+    device_id = request.headers.get("x-device-id") or request.headers.get("X-Device-Id")
+    profile = await _ensure_community_profile(user, device_id)
+    my_nickname = profile.get("nickname")
+    query = {"participants": {"$all": [my_nickname, peer_nickname], "$size": 2}}
+    docs = await db.community_messages.find(query, {"_id": 0}).sort("created_at", 1).limit(200).to_list(200)
+    await db.community_messages.update_many(
+        {"participants": {"$all": [my_nickname, peer_nickname], "$size": 2}, "to_nickname": my_nickname},
+        {"$addToSet": {"read_by": my_nickname}},
+    )
+    return docs
+
+
+@api_router.post("/community/dm/thread/{peer_nickname}")
+async def send_community_dm_thread(peer_nickname: str, body: CommunityDMCreateRequest, request: Request):
+    user = await get_current_user(request)
+    device_id = request.headers.get("x-device-id") or request.headers.get("X-Device-Id")
+    if not await _is_plus_member(user, device_id):
+        raise HTTPException(status_code=402, detail="plus_required")
+    msg = await _send_community_dm(user=user, device_id=device_id, peer_nickname=peer_nickname, text=body.text)
+    return {"ok": True, "message": {k: v for k, v in msg.items() if k not in {"_id", "read_by"}}}
 
 
 @api_router.post("/onboarding/quiz")

@@ -430,3 +430,13 @@ agent_communication:
       5) Frontend: profielscherm toont geheugen-toggle; chat ondersteunt accept/reject van profile_suggestion.
       Bekende beperking: huidige STRIPE_API_KEY in omgeving is ongeldig volgens Stripe, checkout blijft daardoor fallback/mock.
 
+  - agent: "main"
+    message: |
+      Iteratie 8 — Community launch-scope toegevoegd (mini-twitter anoniem + premium gating).
+      Nieuwe scope om te testen:
+      1) Backend community endpoints: GET /api/community/me, GET /api/community/feed, POST /api/community/posts.
+      2) Nickname flow: auto-nickname + custom nickname via POST /api/community/nickname.
+      3) Premium gating: free = read-only; plus/trialing = posten + DM.
+      4) DM flow: GET /api/community/dm/inbox + GET/POST /api/community/dm/thread/{peer_nickname}.
+      5) Frontend routes: /community, /community/inbox, /community/[peer] met read-only/plus gedrag.
+

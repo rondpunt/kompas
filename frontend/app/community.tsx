@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -6,12 +6,15 @@ import {
   TouchableOpacity,
   ScrollView,
   Platform,
+  TextInput,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter, Stack } from "expo-router";
 import { useTheme } from "@/src/theme/ThemeContext";
 import { PlusModal } from "@/src/components/PlusModal";
+import { communityApi, CommunityMe, CommunityPost } from "@/src/api/community";
 
 interface Channel {
   id: string;
@@ -36,27 +39,104 @@ const CHANNELS: Channel[] = [
   { id: "relaties", label: "Relaties", hint: "Partner, ouders, vrienden", members: "1.0k", sampleActivity: "29 nieuwe posts vandaag", iconLib: "Feather", iconName: "users", bgNight: "#1e40af", fgNight: "#bfdbfe" },
 ];
 
-const FILTERS = [
-  { id: "all", label: "Alles" },
-  { id: "stress", label: "Stress" },
-  { id: "werk", label: "Werk" },
-  { id: "relaties", label: "Relaties" },
-  { id: "diagnose", label: "Diagnose" },
-] as const;
+const FILTERS = [{ id: "all", label: "Alles" }, ...CHANNELS.map((c) => ({ id: c.id, label: c.label }))] as const;
+
+function relTime(iso?: string) {
+  if (!iso) return "net";
+  const ms = Date.now() - new Date(iso).getTime();
+  const m = Math.max(1, Math.floor(ms / 60000));
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}u`;
+  return `${Math.floor(h / 24)}d`;
+}
 
 export default function Community() {
   const { palette } = useTheme();
   const router = useRouter();
   const [showPlus, setShowPlus] = useState(false);
   const [activeFilter, setActiveFilter] = useState<(typeof FILTERS)[number]["id"]>("all");
+  const [me, setMe] = useState<CommunityMe | null>(null);
+  const [posts, setPosts] = useState<CommunityPost[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [postDraft, setPostDraft] = useState("");
+  const [posting, setPosting] = useState(false);
+  const [nicknameDraft, setNicknameDraft] = useState("");
+  const [savingNick, setSavingNick] = useState(false);
+  const [errorText, setErrorText] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setErrorText(null);
+    try {
+      const [meRes, feedRes] = await Promise.all([
+        communityApi.me(),
+        communityApi.feed(activeFilter === "all" ? "all" : activeFilter),
+      ]);
+      setMe(meRes);
+      setNicknameDraft(meRes.nickname ?? "");
+      setPosts(feedRes);
+    } catch (e: any) {
+      setErrorText(e?.message ?? "community laden mislukt");
+    } finally {
+      setLoading(false);
+    }
+  }, [activeFilter]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const shownChannels = useMemo(() => {
     if (activeFilter === "all") return CHANNELS;
-    if (activeFilter === "relaties") return CHANNELS.filter((c) => c.id === "relaties");
-    if (activeFilter === "werk") return CHANNELS.filter((c) => c.id === "burnout");
-    if (activeFilter === "stress") return CHANNELS.filter((c) => c.id === "angst" || c.id === "hsp");
-    return CHANNELS.filter((c) => c.id !== "relaties");
+    return CHANNELS.filter((c) => c.id === activeFilter);
   }, [activeFilter]);
+
+  const saveNickname = useCallback(async () => {
+    const next = nicknameDraft.trim();
+    if (next.length < 3 || savingNick) return;
+    setSavingNick(true);
+    try {
+      const res = await communityApi.setNickname(next);
+      setMe((prev) => (prev ? { ...prev, nickname: res.nickname } : prev));
+    } catch (e: any) {
+      setErrorText(e?.message ?? "nickname opslaan mislukt");
+    } finally {
+      setSavingNick(false);
+    }
+  }, [nicknameDraft, savingNick]);
+
+  const submitPost = useCallback(async () => {
+    if (!me?.can_post) {
+      setShowPlus(true);
+      return;
+    }
+    const content = postDraft.trim();
+    if (!content || posting) return;
+    setPosting(true);
+    try {
+      const created = await communityApi.createPost({
+        content,
+        channel: activeFilter === "all" ? "algemeen" : activeFilter,
+      });
+      setPosts((prev) => [created, ...prev]);
+      setPostDraft("");
+    } catch (e: any) {
+      setErrorText(e?.message ?? "posten mislukt");
+    } finally {
+      setPosting(false);
+    }
+  }, [me?.can_post, postDraft, posting, activeFilter]);
+
+  const startDM = useCallback(
+    (nickname: string) => {
+      if (!me?.can_dm) {
+        setShowPlus(true);
+        return;
+      }
+      router.push(`/community/${encodeURIComponent(nickname)}` as any);
+    },
+    [me?.can_dm, router],
+  );
 
   return (
     <SafeAreaView style={[styles.root, { backgroundColor: palette.background }]}>
@@ -67,7 +147,9 @@ export default function Community() {
           <Feather name="chevron-left" size={22} color={palette.textPrimary} />
         </TouchableOpacity>
         <Text style={[styles.topTitle, { color: palette.textPrimary }]}>Gemeenschap</Text>
-        <View style={styles.iconBtn} />
+        <TouchableOpacity testID="community-open-inbox" onPress={() => router.push("/community/inbox" as any)} style={styles.iconBtn}>
+          <Feather name="inbox" size={18} color={palette.textPrimary} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.body}>
@@ -111,6 +193,63 @@ export default function Community() {
             <Text style={styles.heroCtaText}>Ontgrendel Plus Community</Text>
           </TouchableOpacity>
         </View>
+
+        <View style={[styles.identityCard, { backgroundColor: palette.surfaceElevated, borderColor: palette.borderSubtle }]}>
+          <Text style={[styles.identityLabel, { color: palette.textMuted }]}>ANONIEME NICKNAME</Text>
+          <View style={styles.identityRow}>
+            <TextInput
+              testID="community-nickname-input"
+              value={nicknameDraft}
+              onChangeText={setNicknameDraft}
+              placeholder="Jouw nickname"
+              placeholderTextColor={palette.textFaint}
+              style={[
+                styles.identityInput,
+                { color: palette.textPrimary, borderColor: palette.borderDefault, backgroundColor: palette.background },
+              ]}
+            />
+            <TouchableOpacity
+              testID="community-nickname-save"
+              disabled={savingNick || nicknameDraft.trim().length < 3}
+              onPress={saveNickname}
+              style={[styles.identityBtn, { backgroundColor: palette.accent, opacity: savingNick ? 0.7 : 1 }]}
+            >
+              {savingNick ? <ActivityIndicator size="small" color="#0a0a0a" /> : <Text style={styles.identityBtnText}>Opslaan</Text>}
+            </TouchableOpacity>
+          </View>
+          <Text style={[styles.identityHint, { color: palette.textMuted }]}>Je echte identiteit is nergens zichtbaar in de feed.</Text>
+        </View>
+
+        {me?.can_post ? (
+          <View style={[styles.composeCard, { backgroundColor: palette.surfaceElevated, borderColor: palette.borderSubtle }]}>
+            <Text style={[styles.composeTitle, { color: palette.textPrimary }]}>Deel anoniem wat er speelt</Text>
+            <TextInput
+              testID="community-post-input"
+              value={postDraft}
+              onChangeText={setPostDraft}
+              multiline
+              placeholder="Wat wil je delen met mensen die hetzelfde meemaken?"
+              placeholderTextColor={palette.textFaint}
+              style={[styles.composeInput, { color: palette.textPrimary, borderColor: palette.borderDefault }]}
+            />
+            <TouchableOpacity
+              testID="community-post-submit"
+              onPress={submitPost}
+              disabled={posting || !postDraft.trim()}
+              style={[styles.composeBtn, { backgroundColor: palette.accent, opacity: posting || !postDraft.trim() ? 0.65 : 1 }]}
+            >
+              {posting ? <ActivityIndicator size="small" color="#0a0a0a" /> : <Text style={styles.composeBtnText}>Plaats anoniem</Text>}
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={[styles.lockedCard, { backgroundColor: palette.surfaceElevated, borderColor: palette.borderSubtle }]}>
+            <Text style={[styles.lockedTitle, { color: palette.textPrimary }]}>Free = read-only</Text>
+            <Text style={[styles.lockedBody, { color: palette.textSecondary }]}>Met Kompas Plus kan je posten en direct contact leggen via DM.</Text>
+            <TouchableOpacity testID="community-upsell-posting" onPress={() => setShowPlus(true)} style={[styles.lockedBtn, { borderColor: palette.borderDefault }]}>
+              <Text style={[styles.lockedBtnText, { color: palette.textPrimary }]}>Ontgrendel posten + DM</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <Text style={[styles.sectionLabel, { color: palette.textMuted }]}>FILTER</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
@@ -177,6 +316,38 @@ export default function Community() {
           ))}
         </View>
 
+        <Text style={[styles.sectionLabel, { color: palette.textMuted }]}>FEED</Text>
+        {loading ? (
+          <View style={styles.loadingBox}>
+            <ActivityIndicator size="small" color={palette.accent} />
+          </View>
+        ) : posts.length === 0 ? (
+          <View style={[styles.emptyCard, { borderColor: palette.borderSubtle, backgroundColor: palette.surfaceElevated }]}>
+            <Text style={[styles.emptyTitle, { color: palette.textPrimary }]}>Nog geen posts in dit kanaal</Text>
+            <Text style={[styles.emptyBody, { color: palette.textMuted }]}>Jij kan als eerste delen zodra Plus actief is.</Text>
+          </View>
+        ) : (
+          <View style={styles.feedList}>
+            {posts.map((p) => (
+              <View key={p.id} testID={`community-feed-post-${p.id}`} style={[styles.postCard, { borderColor: palette.borderSubtle, backgroundColor: palette.surfaceElevated }]}>
+                <View style={styles.postHead}>
+                  <Text style={[styles.postNick, { color: palette.textPrimary }]}>@{p.author_nickname}</Text>
+                  <Text style={[styles.postMeta, { color: palette.textFaint }]}>
+                    {p.channel} · {relTime(p.created_at)}
+                  </Text>
+                </View>
+                <Text style={[styles.postBody, { color: palette.textSecondary }]}>{p.content}</Text>
+                <View style={styles.postActions}>
+                  <TouchableOpacity testID={`community-dm-${p.id}`} onPress={() => startDM(p.author_nickname)} style={[styles.dmBtn, { borderColor: palette.borderDefault }]}>
+                    <Feather name="message-circle" size={13} color={palette.textPrimary} />
+                    <Text style={[styles.dmBtnText, { color: palette.textPrimary }]}>Contact</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+
         <View style={[styles.guidelineCard, { backgroundColor: palette.surfaceElevated, borderColor: palette.borderSubtle }]}>
           <Text style={[styles.guidelineTitle, { color: palette.textPrimary }]}>Communityregels</Text>
           <View style={styles.ruleRow}>
@@ -200,6 +371,7 @@ export default function Community() {
         <Text style={[styles.privacyNote, { color: palette.textMuted }]}> 
           Anoniem handle per kanaal. Geen echte namen of foto's. Voorlopig read-only voor gratis gebruikers.
         </Text>
+        {errorText ? <Text style={[styles.errorText, { color: "#ef4444" }]}>{errorText}</Text> : null}
       </ScrollView>
 
       <PlusModal visible={showPlus} reason="community" onClose={() => setShowPlus(false)} />
@@ -286,6 +458,66 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
   },
+  identityCard: {
+    borderRadius: 14,
+    borderWidth: 0.5,
+    padding: 12,
+    marginBottom: 14,
+  },
+  identityLabel: { fontSize: 10.5, letterSpacing: 0.5, fontWeight: "600", marginBottom: 8 },
+  identityRow: { flexDirection: "row", gap: 8 },
+  identityInput: {
+    flex: 1,
+    borderWidth: 0.5,
+    borderRadius: 10,
+    minHeight: 42,
+    paddingHorizontal: 12,
+    fontSize: 13,
+  },
+  identityBtn: {
+    minWidth: 88,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 14,
+  },
+  identityBtnText: { color: "#0a0a0a", fontWeight: "700", fontSize: 12.5 },
+  identityHint: { marginTop: 7, fontSize: 11.5 },
+  composeCard: {
+    borderRadius: 14,
+    borderWidth: 0.5,
+    padding: 12,
+    marginBottom: 16,
+  },
+  composeTitle: { fontSize: 14, fontWeight: "600", marginBottom: 8 },
+  composeInput: {
+    minHeight: 84,
+    borderWidth: 0.5,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    fontSize: 14,
+    marginBottom: 10,
+    textAlignVertical: "top",
+  },
+  composeBtn: { minHeight: 42, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  composeBtnText: { color: "#0a0a0a", fontSize: 13, fontWeight: "700" },
+  lockedCard: {
+    borderRadius: 14,
+    borderWidth: 0.5,
+    padding: 12,
+    marginBottom: 16,
+  },
+  lockedTitle: { fontSize: 14, fontWeight: "600", marginBottom: 4 },
+  lockedBody: { fontSize: 12.5, lineHeight: 18, marginBottom: 10 },
+  lockedBtn: {
+    minHeight: 40,
+    borderRadius: 10,
+    borderWidth: 0.5,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  lockedBtnText: { fontSize: 12.5, fontWeight: "600" },
   sectionLabel: {
     fontSize: 11,
     fontWeight: "500",
@@ -362,6 +594,27 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   rulesCtaText: { fontSize: 12.5, fontWeight: "600" },
+  loadingBox: { paddingVertical: 16, alignItems: "center" },
+  emptyCard: { borderRadius: 12, borderWidth: 0.5, padding: 12, marginBottom: 14 },
+  emptyTitle: { fontSize: 13, fontWeight: "600", marginBottom: 3 },
+  emptyBody: { fontSize: 12, lineHeight: 17 },
+  feedList: { gap: 10, marginBottom: 16 },
+  postCard: { borderWidth: 0.5, borderRadius: 12, padding: 12 },
+  postHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 6 },
+  postNick: { fontSize: 13, fontWeight: "700" },
+  postMeta: { fontSize: 11.5 },
+  postBody: { fontSize: 13.5, lineHeight: 20, marginBottom: 10 },
+  postActions: { flexDirection: "row", justifyContent: "flex-end" },
+  dmBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderWidth: 0.5,
+    borderRadius: 999,
+    minHeight: 36,
+    paddingHorizontal: 10,
+  },
+  dmBtnText: { fontSize: 12.5, fontWeight: "500" },
   privacyNote: {
     fontSize: 11.5,
     lineHeight: 16,
@@ -369,4 +622,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginTop: 2,
   },
+  errorText: { marginTop: 8, fontSize: 12 },
 });
