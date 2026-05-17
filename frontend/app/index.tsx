@@ -19,11 +19,21 @@ import { Wordmark } from "@/src/components/Wordmark";
 import { Sidebar } from "@/src/components/Sidebar";
 import { TestSuggestionPill } from "@/src/components/TestSuggestionPill";
 import { SecureHandshake } from "@/src/components/SecureHandshake";
+import { PlusHintBanner } from "@/src/components/PlusHintBanner";
+import { PlusModal } from "@/src/components/PlusModal";
 import { api, ApiMessage, ChatResponse } from "@/src/api/client";
 import { hasOnboarded } from "./onboarding";
+import { bumpMessageCount, dismissPlusHint, getUsage, UsageSnapshot } from "@/src/utils/usage";
 
 // Module-level flag so the handshake plays only once per app launch
 let coldLaunchHandshakeShown = false;
+
+const QUICK_PROMPTS = [
+  { id: "vandaag", icon: "sun", label: "Hoe ‘k me vandaag voel" },
+  { id: "werk", icon: "briefcase", label: "Werk zit zwaar" },
+  { id: "relatie", icon: "heart", label: "Iets in mijn relatie" },
+  { id: "piekeren", icon: "wind", label: "Ik blijf piekeren" },
+] as const;
 
 export default function ChatScreen() {
   const { palette } = useTheme();
@@ -36,9 +46,11 @@ export default function ChatScreen() {
   const [cursorVisible, setCursorVisible] = useState(true);
   const [handshakeVisible, setHandshakeVisible] = useState(!coldLaunchHandshakeShown);
   const [onboardingChecked, setOnboardingChecked] = useState(false);
+  const [usage, setUsage] = useState<UsageSnapshot | null>(null);
+  const [showPlusModal, setShowPlusModal] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
-  // First mount: route to /onboarding if not done yet
+  // First mount: route to /onboarding if not done yet, then load usage
   useEffect(() => {
     (async () => {
       const done = await hasOnboarded();
@@ -47,6 +59,8 @@ export default function ChatScreen() {
         return;
       }
       setOnboardingChecked(true);
+      const u = await getUsage();
+      setUsage(u);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -74,46 +88,61 @@ export default function ChatScreen() {
     })();
   }, [conversationId]);
 
-  const handleSend = useCallback(async () => {
-    const text = draft.trim();
-    if (!text || sending) return;
-    setDraft("");
-    Keyboard.dismiss();
-    setSending(true);
+  const sendText = useCallback(
+    async (text: string) => {
+      if (!text || sending) return;
+      setDraft("");
+      Keyboard.dismiss();
+      setSending(true);
 
-    const optimisticUser: ApiMessage = {
-      id: `tmp-${Date.now()}`,
-      conversation_id: conversationId ?? "",
-      role: "user",
-      content: text,
-      created_at: new Date().toISOString(),
-    };
-    setMessages((prev) => [...prev, optimisticUser]);
+      const optimisticUser: ApiMessage = {
+        id: `tmp-${Date.now()}`,
+        conversation_id: conversationId ?? "",
+        role: "user",
+        content: text,
+        created_at: new Date().toISOString(),
+      };
+      setMessages((prev) => [...prev, optimisticUser]);
 
-    try {
-      const res: ChatResponse = await api.chat(text, conversationId ?? undefined);
-      setConversationId(res.conversation_id);
-      setMessages((prev) => {
-        const withoutOpt = prev.filter((m) => m.id !== optimisticUser.id);
-        return [...withoutOpt, res.user_message, res.assistant_message];
-      });
-    } catch (e) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `err-${Date.now()}`,
-          conversation_id: conversationId ?? "",
-          role: "assistant",
-          content: "Er ging iets mis bij het versturen. Probeer 't nog eens.",
-          created_at: new Date().toISOString(),
-        },
-      ]);
-      console.warn(e);
-    } finally {
-      setSending(false);
-      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);
-    }
-  }, [draft, sending, conversationId]);
+      try {
+        const res: ChatResponse = await api.chat(text, conversationId ?? undefined);
+        setConversationId(res.conversation_id);
+        setMessages((prev) => {
+          const withoutOpt = prev.filter((m) => m.id !== optimisticUser.id);
+          return [...withoutOpt, res.user_message, res.assistant_message];
+        });
+        // Track usage for soft-paywall — count user-sent messages
+        await bumpMessageCount();
+        const u = await getUsage();
+        setUsage(u);
+      } catch (e) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `err-${Date.now()}`,
+            conversation_id: conversationId ?? "",
+            role: "assistant",
+            content: "Er ging iets mis bij het versturen. Probeer 't nog eens.",
+            created_at: new Date().toISOString(),
+          },
+        ]);
+        console.warn(e);
+      } finally {
+        setSending(false);
+        setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);
+      }
+    },
+    [conversationId, sending],
+  );
+
+  const handleSend = useCallback(() => sendText(draft.trim()), [draft, sendText]);
+  const handleQuickPrompt = useCallback((label: string) => sendText(label), [sendText]);
+
+  const handleDismissPlusHint = useCallback(async () => {
+    await dismissPlusHint();
+    const u = await getUsage();
+    setUsage(u);
+  }, []);
 
   useEffect(() => {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60);
@@ -126,6 +155,7 @@ export default function ChatScreen() {
 
   const isEmpty = messages.length === 0;
   const hasText = draft.trim().length > 0;
+  const showPlusHint = !!usage?.shouldShowPlusHint;
 
   return (
     <SafeAreaView style={[styles.root, { backgroundColor: palette.background }]} edges={["top", "bottom", "left", "right"]}>
@@ -156,10 +186,59 @@ export default function ChatScreen() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         {isEmpty ? (
-          <View style={styles.emptyState} testID="chat-empty">
+          <ScrollView
+            contentContainerStyle={styles.emptyState}
+            showsVerticalScrollIndicator={false}
+            testID="chat-empty"
+          >
+            <View
+              style={[
+                styles.emptyHaloOuter,
+                {
+                  borderColor: palette.accent + "22",
+                  backgroundColor: palette.accentSoft,
+                },
+              ]}
+            >
+              <View
+                style={[
+                  styles.emptyHaloInner,
+                  { borderColor: palette.accent + "55", backgroundColor: palette.background },
+                ]}
+              >
+                <Feather name="compass" size={26} color={palette.accent} />
+              </View>
+            </View>
             <Text style={[styles.emptyText, { color: palette.textPrimary }]}>Wat speelt er?</Text>
             <Text style={[styles.tagline, { color: palette.textMuted }]}>Voor wat speelt.</Text>
-          </View>
+
+            <View style={styles.quickGrid}>
+              {QUICK_PROMPTS.map((q) => (
+                <TouchableOpacity
+                  key={q.id}
+                  testID={`quick-${q.id}`}
+                  onPress={() => handleQuickPrompt(q.label)}
+                  activeOpacity={0.7}
+                  style={[
+                    styles.quickChip,
+                    {
+                      backgroundColor: palette.surfaceElevated,
+                      borderColor: palette.borderSubtle,
+                    },
+                  ]}
+                >
+                  <Feather name={q.icon as any} size={14} color={palette.textMuted} />
+                  <Text style={[styles.quickChipText, { color: palette.textPrimary }]} numberOfLines={1}>
+                    {q.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={[styles.privacyLine, { color: palette.textFaint }]}>
+              Anoniem · Versleuteld · Niets wordt doorverkocht
+            </Text>
+          </ScrollView>
         ) : (
           <ScrollView
             ref={scrollRef}
@@ -178,7 +257,15 @@ export default function ChatScreen() {
                 testID={`message-${m.role}`}
               >
                 {m.role === "user" ? (
-                  <View style={[styles.userBubble, { backgroundColor: palette.surfaceElevated }]}>
+                  <View
+                    style={[
+                      styles.userBubble,
+                      {
+                        backgroundColor: palette.surfaceElevated,
+                        borderColor: palette.borderSubtle,
+                      },
+                    ]}
+                  >
                     <Text style={[styles.bodyText, { color: palette.textPrimary }]}>{m.content}</Text>
                   </View>
                 ) : (
@@ -205,11 +292,22 @@ export default function ChatScreen() {
           </ScrollView>
         )}
 
+        {showPlusHint && !isEmpty && (
+          <PlusHintBanner
+            variant="chat"
+            onPress={() => setShowPlusModal(true)}
+            onDismiss={handleDismissPlusHint}
+          />
+        )}
+
         <View style={[styles.inputArea, { backgroundColor: palette.background }]}>
           <View
             style={[
               styles.inputPill,
-              { backgroundColor: palette.surfaceElevated, borderColor: palette.borderSubtle },
+              {
+                backgroundColor: palette.surfaceElevated,
+                borderColor: hasText ? palette.accent + "55" : palette.borderSubtle,
+              },
             ]}
           >
             <TouchableOpacity testID="chat-attach" style={styles.inputIconBtn} disabled>
@@ -231,6 +329,7 @@ export default function ChatScreen() {
                 testID="chat-send"
                 onPress={handleSend}
                 disabled={sending}
+                activeOpacity={0.8}
                 style={[styles.sendBtn, { backgroundColor: palette.accent }]}
               >
                 {sending ? (
@@ -250,10 +349,24 @@ export default function ChatScreen() {
               <Feather name="mic" size={12} color={palette.textMuted} />
               <Text style={[styles.subActionText, { color: palette.textMuted }]}>Spraak</Text>
             </View>
+            <View style={styles.subActionDot}>
+              <View style={[styles.dotMini, { backgroundColor: palette.textFaint }]} />
+            </View>
             <View style={styles.subActionItem}>
               <Feather name="camera" size={12} color={palette.textMuted} />
               <Text style={[styles.subActionText, { color: palette.textMuted }]}>Foto</Text>
             </View>
+            <View style={styles.subActionDot}>
+              <View style={[styles.dotMini, { backgroundColor: palette.textFaint }]} />
+            </View>
+            <TouchableOpacity
+              testID="chat-quick-zelftest"
+              onPress={() => router.push("/zelftesten")}
+              style={styles.subActionItem}
+            >
+              <Feather name="check-square" size={12} color={palette.textMuted} />
+              <Text style={[styles.subActionText, { color: palette.textMuted }]}>Zelftest</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -273,6 +386,12 @@ export default function ChatScreen() {
           }}
         />
       )}
+
+      <PlusModal
+        visible={showPlusModal}
+        reason="memory"
+        onClose={() => setShowPlusModal(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -294,21 +413,68 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   emptyState: {
-    flex: 1,
+    flexGrow: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 24,
+    paddingVertical: 32,
+  },
+  emptyHaloOuter: {
+    width: 92,
+    height: 92,
+    borderRadius: 46,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 18,
+  },
+  emptyHaloInner: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
   emptyText: {
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: "500",
     fontFamily: Platform.select({ ios: "Georgia", android: "serif" }),
     fontStyle: "italic",
     textAlign: "center",
+    letterSpacing: -0.4,
   },
   tagline: {
     fontSize: 13,
-    marginTop: 12,
+    marginTop: 8,
+  },
+  quickGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 24,
+    width: "100%",
+    maxWidth: 380,
+  },
+  quickChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 999,
+    borderWidth: 0.5,
+    maxWidth: 180,
+  },
+  quickChipText: {
+    fontSize: 12.5,
+    fontWeight: "500",
+  },
+  privacyLine: {
+    fontSize: 10.5,
+    marginTop: 28,
+    letterSpacing: 0.3,
   },
   scroll: { flex: 1 },
   scrollContent: {
@@ -333,6 +499,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 22,
+    borderWidth: 0.5,
   },
   assistantBlock: {
     maxWidth: "96%",
@@ -354,7 +521,7 @@ const styles = StyleSheet.create({
   inputPill: {
     flexDirection: "row",
     alignItems: "flex-end",
-    minHeight: 48,
+    minHeight: 50,
     borderRadius: 28,
     paddingHorizontal: 8,
     paddingVertical: 6,
@@ -362,36 +529,45 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   inputIconBtn: {
-    width: 32,
-    height: 32,
+    width: 34,
+    height: 34,
     alignItems: "center",
     justifyContent: "center",
   },
   input: {
     flex: 1,
-    minHeight: 36,
+    minHeight: 38,
     maxHeight: 120,
     fontSize: 15,
-    paddingTop: 8,
+    paddingTop: 9,
     paddingHorizontal: 4,
   },
   sendBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: "center",
     justifyContent: "center",
   },
   subActions: {
     flexDirection: "row",
     justifyContent: "center",
-    gap: 18,
-    paddingTop: 6,
+    alignItems: "center",
+    gap: 10,
+    paddingTop: 8,
   },
   subActionItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 5,
+  },
+  subActionDot: {
+    paddingHorizontal: 4,
+  },
+  dotMini: {
+    width: 2,
+    height: 2,
+    borderRadius: 1,
   },
   subActionText: {
     fontSize: 12,

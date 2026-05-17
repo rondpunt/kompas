@@ -8,14 +8,22 @@
 - **Platform**: Expo React Native (Android-first, also iOS)
 - **Chat model**: Claude Sonnet 4.5 (`claude-sonnet-4-5-20250929`) via Emergent Universal Key
 - **Language**: Belgian Dutch only
-- **Auth**: Anonymous (no login) for v1 MVP
+- **Auth**: Anonymous (default). Optional Emergent-managed Google Auth for sync + Plus tier.
 
-## What's new in iteration 3
-- **Emergent-managed Google Auth** — optionele Google login via `https://auth.emergentagent.com`. Anonieme modus blijft de default; login alleen nodig voor sync tussen toestellen en (later) Plus tier.
-- **device_id scoping** — elke anonieme client krijgt een persistente UUID. Backend isoleert conversations en assessment-results per device_id zodat verschillende anonieme gebruikers elkaars data nooit zien.
-- **Auto-claim bij login** — bij eerste keer aanmelden worden alle anonieme gesprekken/resultaten van dit toestel automatisch aan het profiel gekoppeld (via `POST /api/auth/claim`).
-- **Settings ACCOUNT sectie** toont "Anoniem · Geen profiel" + "Aanmelden met Google" CTA voor anonieme gebruikers; profiel-avatar + naam + email + uitloggen-knop voor aangemelde gebruikers.
-- **Animation fix** — SecureHandshake speelt alleen nog bij cold launch, niet meer bij elke nieuwe chat.
+## What's new in iteration 4 — Premium UX + soft-paywall + community teaser
+- **Onboarding herwerkt** — 4 slides (was 3), amber-accented eyebrows, back-arrow per slide, geen verkooppraat. Slide-volgorde: Welkom → Twee zinnen volstaan → Privé → Begin.
+- **Premium empty-state op chat** — compass-halo, italic Georgia titel, 4 quick-prompt chips ("Hoe 'k me vandaag voel" / "Werk zit zwaar" / "Iets in mijn relatie" / "Ik blijf piekeren") die meteen een gesprek starten.
+- **Soft-paywall logica** — usage tracker in local storage (`/app/frontend/src/utils/usage.ts`). Plus-hint banner verschijnt PAS na 20 berichten OF 3 dagen actief, en nooit als blocker. 5-dagen cooldown na dismiss.
+- **Premium Plus modal** (`/app/frontend/src/components/PlusModal.tsx`) — bottom-sheet met thema-context (pdf / memory / community / voice / generic). Toont prijs €4,99/maand of €39/jaar, "Houd me op de hoogte" CTA. Geen echte aankoop nog.
+- **Gemeenschap (community) placeholder** (`/app/frontend/app/community.tsx`) — 8 anonieme thema-kanalen (ADHD, Autisme, Burn-out, Depressie, Angst, Hooggevoelig, Verlies, Relaties) elk met eigen icoon/kleur. Elke tegel opent PlusModal (binnenkort). Sidebar krijgt nieuwe "Gemeenschap" link met PLUS chip.
+- **PDF voor therapeut + Bewaar in geheugen** op test-resultaat scherm — beide knoppen openen nu PlusModal (geen echte PDF gen, geen kost). Zichtbare hint van Plus-waarde.
+- **Subtle input pill ring** — input-pill krijgt amber border-glow zodra je typt.
+
+## What's new in iteration 3 — Auth + device_id scoping
+- **Emergent-managed Google Auth** — optionele login via `https://auth.emergentagent.com`. Anonieme modus blijft default.
+- **device_id scoping** — elke anonieme client krijgt persistente UUID. Backend isoleert per device_id.
+- **Auto-claim bij login** — anonieme conversations/results worden gekoppeld aan profiel.
+- **Settings ACCOUNT sectie** met sign-in/out flow.
 
 ## What's new in iteration 2
 - **Onboarding flow** (3 slides, first-launch only): Welkom ("Wat speelt er?"), Hoe werkt het ("Verwijlen, niet fixen"), Privé ("Wat je deelt blijft van jou").

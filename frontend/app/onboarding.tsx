@@ -23,29 +23,41 @@ interface Slide {
   bullets?: string[];
 }
 
+// 4 slides — hook-driven, no signup pressure, no Plus mention.
+// Tone: Belgian Dutch, anti-self-optimization, "verwijlen".
 const SLIDES: Slide[] = [
   {
-    title: "Wat speelt er?",
-    body: "Kompas is geen therapeut. Geen coach. Geen tool met badges of streaks.\n\nGewoon een plek waar je kan zeggen wat speelt — werk, relatie, ouders, dagen die niet meewerken. Twee tot vier zinnen tegelijk. Soms één.",
     eyebrow: "Welkom",
+    title: "Wat speelt er?",
+    body:
+      "Geen therapeut. Geen coach. Geen badges of streaks.\n\nGewoon een plek waar je kan zeggen wat speelt — werk, relatie, ouders, dagen die niet meewerken.",
   },
   {
-    icon: "compass",
-    eyebrow: "Hoe werkt het",
-    title: "Verwijlen, niet fixen",
-    body: "Kompas vraagt eerst door voor er iets gezegd wordt. Geen 'tips en tricks', geen 'wat goed dat je dit deelt'. Imperfectie is hier OK.\n\nWanneer er iets specifieks speelt — concentratie, neerslachtigheid, piekeren — kan Kompas één korte zelftest voorstellen. Vrijblijvend.",
+    icon: "feather",
+    eyebrow: "Zo werkt het",
+    title: "Twee zinnen volstaan",
+    body:
+      "Je hoeft niet wijdlopig te zijn. Eén lijn over wat speelt is genoeg om te starten.\n\nKompas vraagt eerst door, voor er iets gezegd wordt. Geen tips-en-tricks, geen 'wat goed dat je dit deelt'.",
   },
   {
     icon: "lock",
     eyebrow: "Privé",
     title: "Wat je deelt blijft van jou",
-    body: "Kompas verzamelt zo weinig mogelijk en doet niets met wat je deelt buiten dit gesprek.",
+    body:
+      "Kompas verzamelt zo weinig mogelijk. Anoniem in gebruik. Niets wordt doorverkocht of gedeeld.",
     bullets: [
-      "Anoniem in gebruik — geen email, geen telefoon",
+      "Geen email, geen telefoon nodig",
       "Versleuteld kanaal voor elk gesprek",
       "Geen reclame, geen tracking, niet gedeeld met derden",
-      "Jij beheert je geschiedenis — wis wanneer je wil",
+      "Jij wist je geschiedenis wanneer je wil",
     ],
+  },
+  {
+    icon: "compass",
+    eyebrow: "Klaar?",
+    title: "Begin met één lijn",
+    body:
+      "Schrijf wat eerst opkomt. Een gevoel, een gedachte, een dag. Geen goed of fout begin.\n\nKompas is geen vervanging voor professionele zorg — wel een plek tussendoor.",
   },
 ];
 
@@ -68,6 +80,14 @@ export default function Onboarding() {
     }
   };
 
+  const prev = () => {
+    if (idx === 0) return;
+    Animated.timing(fade, { toValue: 0, duration: 140, useNativeDriver: true }).start(() => {
+      setIdx(idx - 1);
+      Animated.timing(fade, { toValue: 1, duration: 200, useNativeDriver: true }).start();
+    });
+  };
+
   const finish = async () => {
     await storage.setItem(ONBOARDED_KEY, true);
     router.replace("/");
@@ -84,7 +104,15 @@ export default function Onboarding() {
 
       {/* Top bar */}
       <View style={styles.topBar}>
-        <Wordmark size={15} />
+        <View style={styles.topLeft}>
+          {idx > 0 ? (
+            <TouchableOpacity testID="onboarding-prev" onPress={prev} style={styles.iconBtn}>
+              <Feather name="chevron-left" size={20} color={palette.textMuted} />
+            </TouchableOpacity>
+          ) : (
+            <Wordmark size={15} />
+          )}
+        </View>
         <TouchableOpacity testID="onboarding-skip" onPress={skip} style={styles.skipBtn}>
           <Text style={[styles.skipText, { color: palette.textMuted }]}>Overslaan</Text>
         </TouchableOpacity>
@@ -97,7 +125,10 @@ export default function Onboarding() {
             <View
               style={[
                 styles.iconCircle,
-                { borderColor: palette.borderEmphasis, backgroundColor: palette.surfaceElevated },
+                {
+                  borderColor: palette.accent + "55",
+                  backgroundColor: palette.accentSoft,
+                },
               ]}
             >
               <Feather name={slide.icon} size={26} color={palette.accent} />
@@ -105,18 +136,14 @@ export default function Onboarding() {
           )}
 
           {slide.eyebrow && (
-            <Text style={[styles.eyebrow, { color: palette.textMuted }]}>
+            <Text style={[styles.eyebrow, { color: palette.accent }]}>
               {slide.eyebrow.toUpperCase()}
             </Text>
           )}
 
-          <Text style={[styles.title, { color: palette.textPrimary }]}>
-            {slide.title}
-          </Text>
+          <Text style={[styles.title, { color: palette.textPrimary }]}>{slide.title}</Text>
 
-          <Text style={[styles.body, { color: palette.textSecondary }]}>
-            {slide.body}
-          </Text>
+          <Text style={[styles.body, { color: palette.textSecondary }]}>{slide.body}</Text>
 
           {slide.bullets && (
             <View style={styles.bullets}>
@@ -140,7 +167,7 @@ export default function Onboarding() {
               styles.dot,
               {
                 backgroundColor: i === idx ? palette.accent : palette.borderEmphasis,
-                width: i === idx ? 18 : 6,
+                width: i === idx ? 22 : 6,
               },
             ]}
           />
@@ -152,18 +179,19 @@ export default function Onboarding() {
         <TouchableOpacity
           testID="onboarding-next"
           onPress={next}
+          activeOpacity={0.85}
           style={[styles.cta, { backgroundColor: palette.textPrimary }]}
         >
           <Text style={[styles.ctaText, { color: palette.inversePrimary }]}>
-            {isLast ? "Open Kompas" : "Verder"}
+            {isLast ? "Begin" : "Verder"}
           </Text>
           <Feather name="arrow-right" size={16} color={palette.inversePrimary} />
         </TouchableOpacity>
       </View>
 
-      <View style={[styles.footer, { borderTopColor: palette.borderSubtle }]}>
-        <Text style={[styles.footerText, { color: palette.textMuted }]}>
-          Kompas is geen vervanging voor professionele zorg.
+      <View style={styles.footer}>
+        <Text style={[styles.footerText, { color: palette.textFaint }]}>
+          •Kompas
         </Text>
       </View>
     </SafeAreaView>
@@ -184,6 +212,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
+  topLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  iconBtn: {
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: -8,
+  },
   skipBtn: {
     paddingHorizontal: 8,
     paddingVertical: 8,
@@ -194,89 +233,89 @@ const styles = StyleSheet.create({
   },
   slideWrap: {
     flex: 1,
-    paddingHorizontal: 24,
+    paddingHorizontal: 28,
   },
   slideScroll: {
-    paddingVertical: 32,
+    paddingTop: 40,
+    paddingBottom: 20,
     alignItems: "flex-start",
   },
   iconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    borderWidth: 0.5,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 32,
+    marginBottom: 28,
   },
   eyebrow: {
     fontSize: 11,
-    fontWeight: "500",
-    letterSpacing: 0.5,
-    marginBottom: 12,
+    fontWeight: "600",
+    letterSpacing: 0.8,
+    marginBottom: 14,
   },
   title: {
-    fontSize: 28,
+    fontSize: 34,
     fontWeight: "500",
-    lineHeight: 36,
+    lineHeight: 42,
     fontStyle: "italic",
     fontFamily: Platform.select({ ios: "Georgia", android: "serif" }),
-    letterSpacing: -0.3,
-    marginBottom: 18,
+    letterSpacing: -0.5,
+    marginBottom: 20,
   },
   body: {
-    fontSize: 15.5,
-    lineHeight: 24,
+    fontSize: 16,
+    lineHeight: 25,
   },
   bullets: {
-    marginTop: 18,
-    gap: 12,
+    marginTop: 22,
+    gap: 14,
   },
   bulletRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 10,
+    gap: 12,
   },
   bulletText: {
     flex: 1,
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 14.5,
+    lineHeight: 21,
   },
   dotsRow: {
     flexDirection: "row",
     justifyContent: "center",
     gap: 6,
-    paddingVertical: 8,
+    paddingVertical: 10,
   },
   dot: {
     height: 6,
     borderRadius: 3,
   },
   ctaWrap: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 28,
     paddingTop: 8,
     paddingBottom: 8,
   },
   cta: {
-    height: 50,
-    borderRadius: 13,
+    height: 52,
+    borderRadius: 14,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
   },
   ctaText: {
-    fontSize: 15,
-    fontWeight: "500",
+    fontSize: 15.5,
+    fontWeight: "600",
+    letterSpacing: 0.1,
   },
   footer: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderTopWidth: 0.5,
+    paddingVertical: 14,
     alignItems: "center",
   },
   footerText: {
-    fontSize: 10.5,
-    textAlign: "center",
+    fontSize: 11,
+    letterSpacing: 1,
   },
 });

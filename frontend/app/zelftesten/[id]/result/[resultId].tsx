@@ -5,6 +5,7 @@ import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import { useTheme } from "@/src/theme/ThemeContext";
 import { api } from "@/src/api/client";
+import { PlusModal, PlusReason } from "@/src/components/PlusModal";
 
 interface ResultDoc {
   id: string;
@@ -28,6 +29,7 @@ export default function TestResult() {
   const [narrative, setNarrative] = useState<string | null>(null);
   const [narrativeLoading, setNarrativeLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [plusModal, setPlusModal] = useState<PlusReason | null>(null);
 
   const loadResult = useCallback(async () => {
     if (!resultId) return;
@@ -161,9 +163,24 @@ export default function TestResult() {
 
       <View style={styles.actionsStack}>
         <TouchableOpacity
+          testID="result-memory"
+          onPress={() => setPlusModal("memory")}
+          activeOpacity={0.75}
+          style={[styles.secondaryBtn, { borderColor: palette.borderDefault }]}
+        >
+          <Feather name="bookmark" size={15} color={palette.textPrimary} />
+          <Text style={[styles.secondaryBtnText, { color: palette.textPrimary }]}>
+            Bewaar in geheugen
+          </Text>
+          <View style={[styles.plusBadge, { backgroundColor: palette.accent }]}>
+            <Text style={styles.plusBadgeText}>PLUS</Text>
+          </View>
+        </TouchableOpacity>
+        <TouchableOpacity
           testID="result-pdf"
-          disabled
-          style={[styles.secondaryBtn, { borderColor: palette.borderDefault, opacity: 0.6 }]}
+          onPress={() => setPlusModal("pdf")}
+          activeOpacity={0.75}
+          style={[styles.secondaryBtn, { borderColor: palette.borderDefault }]}
         >
           <Feather name="download" size={15} color={palette.textPrimary} />
           <Text style={[styles.secondaryBtnText, { color: palette.textPrimary }]}>
@@ -183,6 +200,12 @@ export default function TestResult() {
           </Text>
         </TouchableOpacity>
       </View>
+
+      <PlusModal
+        visible={plusModal !== null}
+        reason={plusModal ?? "generic"}
+        onClose={() => setPlusModal(null)}
+      />
     </SafeAreaView>
   );
 }

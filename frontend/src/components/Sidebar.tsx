@@ -179,6 +179,24 @@ export function Sidebar({ visible, onClose, currentConversationId, onSelectConve
               </TouchableOpacity>
 
               <TouchableOpacity
+                testID="sidebar-link-community"
+                onPress={() => {
+                  onClose();
+                  router.push("/community");
+                }}
+                style={styles.linkRow}
+              >
+                <View style={styles.linkRowInner}>
+                  <Feather name="users" size={16} color={palette.textPrimary} />
+                  <Text style={[styles.linkText, { color: palette.textPrimary }]}>Gemeenschap</Text>
+                  <View style={[styles.plusChip, { backgroundColor: palette.accent }]}>
+                    <Text style={styles.plusChipText}>PLUS</Text>
+                  </View>
+                </View>
+                <Feather name="chevron-right" size={16} color={palette.textMuted} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
                 testID="sidebar-link-instellingen"
                 onPress={() => {
                   onClose();
@@ -298,5 +316,17 @@ const styles = StyleSheet.create({
   linkText: {
     fontSize: 14,
     fontWeight: "500",
+  },
+  plusChip: {
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginLeft: 6,
+  },
+  plusChipText: {
+    color: "#0a0a0a",
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 0.4,
   },
 });
