@@ -21,16 +21,22 @@ interface Slide {
   title: string;
   body: string;
   bullets?: string[];
+  /** accent tint for halo + eyebrow on this slide */
+  tint: string;
+  tintSoft: string;
 }
 
 // 4 slides — hook-driven, no signup pressure, no Plus mention.
 // Tone: Belgian Dutch, anti-self-optimization, "verwijlen".
 const SLIDES: Slide[] = [
   {
+    icon: "message-circle",
     eyebrow: "Welkom",
     title: "Wat speelt er?",
     body:
       "Geen therapeut. Geen coach. Geen badges of streaks.\n\nGewoon een plek waar je kan zeggen wat speelt — werk, relatie, ouders, dagen die niet meewerken.",
+    tint: "#f59e0b", // amber
+    tintSoft: "rgba(245, 158, 11, 0.16)",
   },
   {
     icon: "feather",
@@ -38,6 +44,8 @@ const SLIDES: Slide[] = [
     title: "Twee zinnen volstaan",
     body:
       "Je hoeft niet wijdlopig te zijn. Eén lijn over wat speelt is genoeg om te starten.\n\nKompas vraagt eerst door, voor er iets gezegd wordt. Geen tips-en-tricks, geen 'wat goed dat je dit deelt'.",
+    tint: "#5eead4", // teal
+    tintSoft: "rgba(94, 234, 212, 0.12)",
   },
   {
     icon: "lock",
@@ -51,6 +59,8 @@ const SLIDES: Slide[] = [
       "Geen reclame, geen tracking, niet gedeeld met derden",
       "Jij wist je geschiedenis wanneer je wil",
     ],
+    tint: "#93c5fd", // blue
+    tintSoft: "rgba(147, 197, 253, 0.12)",
   },
   {
     icon: "compass",
@@ -58,6 +68,8 @@ const SLIDES: Slide[] = [
     title: "Begin met één lijn",
     body:
       "Schrijf wat eerst opkomt. Een gevoel, een gedachte, een dag. Geen goed of fout begin.\n\nKompas is geen vervanging voor professionele zorg — wel een plek tussendoor.",
+    tint: "#d8b4fe", // violet
+    tintSoft: "rgba(216, 180, 254, 0.12)",
   },
 ];
 
@@ -122,21 +134,32 @@ export default function Onboarding() {
       <Animated.View style={[styles.slideWrap, { opacity: fade }]} testID={`onboarding-slide-${idx}`}>
         <ScrollView contentContainerStyle={styles.slideScroll} showsVerticalScrollIndicator={false}>
           {slide.icon && (
-            <View
-              style={[
-                styles.iconCircle,
-                {
-                  borderColor: palette.accent + "55",
-                  backgroundColor: palette.accentSoft,
-                },
-              ]}
-            >
-              <Feather name={slide.icon} size={26} color={palette.accent} />
+            <View style={styles.iconStack}>
+              <View
+                style={[
+                  styles.iconHaloOuter,
+                  {
+                    borderColor: slide.tint + "33",
+                    backgroundColor: slide.tintSoft,
+                  },
+                ]}
+              />
+              <View
+                style={[
+                  styles.iconCircle,
+                  {
+                    borderColor: slide.tint + "66",
+                    backgroundColor: palette.background,
+                  },
+                ]}
+              >
+                <Feather name={slide.icon} size={28} color={slide.tint} />
+              </View>
             </View>
           )}
 
           {slide.eyebrow && (
-            <Text style={[styles.eyebrow, { color: palette.accent }]}>
+            <Text style={[styles.eyebrow, { color: slide.tint }]}>
               {slide.eyebrow.toUpperCase()}
             </Text>
           )}
@@ -240,14 +263,27 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     alignItems: "flex-start",
   },
+  iconStack: {
+    width: 96,
+    height: 96,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 28,
+  },
+  iconHaloOuter: {
+    position: "absolute",
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    borderWidth: 1,
+  },
   iconCircle: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    borderWidth: 1,
+    borderWidth: 1.5,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 28,
   },
   eyebrow: {
     fontSize: 11,
@@ -298,12 +334,21 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   cta: {
-    height: 52,
-    borderRadius: 14,
+    height: 54,
+    borderRadius: 16,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOpacity: 0.3,
+        shadowRadius: 12,
+        shadowOffset: { width: 0, height: 4 },
+      },
+      android: { elevation: 3 },
+    }),
   },
   ctaText: {
     fontSize: 15.5,
