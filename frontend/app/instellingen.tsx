@@ -48,6 +48,24 @@ export default function Settings() {
       </View>
 
       <ScrollView contentContainerStyle={styles.body} testID="settings-body">
+        {/* Profile section */}
+        <Section title="Profiel" palette={palette}>
+          <TouchableOpacity
+            testID="settings-profiel"
+            onPress={() => router.push("/instellingen/profiel" as any)}
+            style={[styles.actionRow, { borderBottomColor: palette.borderSubtle }]}
+          >
+            <Feather name="user" size={16} color={palette.textPrimary} />
+            <View style={{ flex: 1, marginLeft: 12 }}>
+              <Text style={[styles.rowLabel, { color: palette.textPrimary }]}>Mijn profiel</Text>
+              <Text style={[styles.rowValue, { color: palette.textMuted }]}>
+                Hoe meer Kompas weet, hoe scherper het gesprek
+              </Text>
+            </View>
+            <Feather name="chevron-right" size={16} color={palette.textMuted} />
+          </TouchableOpacity>
+        </Section>
+
         {/* Account section */}
         <Section title="Account" palette={palette}>
           {state.status === "loading" ? (

@@ -21,7 +21,7 @@ async function buildHeaders(extra: HeadersInit = {}): Promise<HeadersInit> {
   return headers;
 }
 
-async function request<T>(path: string, opts: RequestInit = {}): Promise<T> {
+export async function request<T>(path: string, opts: RequestInit = {}): Promise<T> {
   const headers = await buildHeaders(opts.headers);
   const res = await fetch(`${API}${path}`, { ...opts, headers });
   if (!res.ok) {

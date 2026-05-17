@@ -71,7 +71,7 @@ const STAGES: Stage[] = [
   },
 ];
 
-export function SecureHandshake({ onComplete, duration = 4200, variant = "full" }: Props) {
+export function SecureHandshake({ onComplete, duration = 1500, variant = "full" }: Props) {
   const { palette } = useTheme();
   const [hexLines, setHexLines] = useState<string[]>([]);
   const [logLines, setLogLines] = useState<string[]>([]);

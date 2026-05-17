@@ -108,6 +108,74 @@ user_problem_statement: |
   Need backend validation that the new auth endpoints work AND existing chat/conversation/assessment endpoints continue to scope correctly by device_id (anonymous) vs user_id (authenticated).
 
 backend:
+  - task: "Profile — GET/PATCH/forget/export/delete CRUD"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: |
+            New endpoints under /api/profile (and /api/profile/forget, /api/profile/export,
+            /api/profile/complete-onboarding, /api/profile/suggestions). Auto-creates an empty
+            profile on first GET. PATCH merges values per section (one of basis|communicatie|
+            levenscontext|wat_werkt|mentaal|waarden|steun|levensbeschouwing). Scoping is the same
+            as conversations: device_id (anon) or user_id (authenticated).
+        - working: true
+          agent: "testing"
+          comment: |
+            All Profile CRUD paths verified on external ingress with X-Device-Id=dev_test_iter5
+            (anon scope). Tests in /app/backend_test_iter5.py:
+            1) GET /api/profile auto-creates empty profile_v1 with all 8 sections; completion
+               map has every section at 0.0; overall_completion=0.0. ✓
+            2) PATCH basis {voornaam:Sam, aanspreken:Sam, geboortejaar:1990} → 200; subsequent
+               GET returned basis.voornaam=='Sam', completion.basis=0.75, overall=0.09. ✓
+            3) PATCH communicatie with toon=1, lengte=2, humor=graag, vraag_stijl=[doorvragen,
+               perspectief], vermijd_zinnen=[kop op, gewoon doen] → 200, all values persisted
+               exactly. ✓
+            4) PATCH unknown section "blabla" → 400 {"detail":"unknown_section"}. ✓
+            5) POST /api/profile/forget {section:basis, field:geboortejaar} → 200; subsequent
+               GET shows geboortejaar absent from basis (key unset, returned as None). ✓
+            6) GET /api/profile/export → 200 with {"profile":{...}} containing the persisted
+               values (voornaam=Sam). ✓
+            7) POST /api/profile/complete-onboarding → 200 {ok:true}; GET shows
+               onboarding_completed=true. ✓
+            8) DELETE /api/profile → 200; subsequent GET re-creates a fresh empty profile
+               (voornaam=None, overall=0.0, onboarding_completed=false). ✓
+            9) Cross-device isolation: after PATCH on dev_test_iter5, GET with
+               X-Device-Id=dev_test_iter5_OTHER returns a freshly auto-created empty profile
+               (other_voornaam=None) — no leakage. ✓
+            All checks PASS.
+
+  - task: "Chat — profile context injected into system prompt"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: |
+            Profile is now loaded per chat call and a compact GEBRUIKERSCONTEXT block is
+            appended to KOMPAS_SYSTEM_PROMPT (build_profile_context in profile_module.py).
+            Validate: chat still 200, reply quality not degraded, no errors when profile is empty.
+        - working: true
+          agent: "testing"
+          comment: |
+            POST /api/chat with X-Device-Id=dev_test_iter5 (profile populated with basis +
+            communicatie values) returned 200 with valid ChatResponse contract:
+            conversation_id, user_message and assistant_message all present. Claude Sonnet 4.5
+            responded ("Wat maakt het zwaar?", 20 chars) — no upstream budget block during
+            this run. No 500s in backend logs during the run. The profile_context is injected
+            server-side and we cannot see the prompt sent to Claude, but the endpoint contract
+            holds and no errors are raised when profile is populated. Admin gating still 401
+            without X-Admin-Token, 200 with kompas-admin-dev-2026.
+
   - task: "Auth — POST /api/auth/session validates Emergent OAuth session_id"
     implemented: true
     working: true
@@ -293,3 +361,19 @@ agent_communication:
         9. /api/admin/overview — 401 without X-Admin-Token, 200 with kompas-admin-dev-2026.
 
       No code changes were made. Test file: /app/backend_test.py. All current_focus items can be marked complete.
+  - agent: "testing"
+    message: |
+      Iteration 5 backend validation: 12/12 PASSED on external ingress (https://noah-android-chat.preview.emergentagent.com/api).
+      Test file: /app/backend_test_iter5.py. Covered:
+        1) GET /api/profile auto-creates empty profile_v1 with all 8 sections, all completions at 0.0, overall=0.0.
+        2) PATCH basis (Sam/1990) persists; basis_completion=0.75, overall=0.09.
+        3) PATCH communicatie persists toon/lengte/humor/vraag_stijl/vermijd_zinnen exactly.
+        4) PATCH unknown section "blabla" → 400 {"detail":"unknown_section"}.
+        5) POST /profile/forget removes basis.geboortejaar (subsequent GET shows it absent).
+        6) GET /profile/export returns {"profile":{...}} with persisted values.
+        7) POST /profile/complete-onboarding sets onboarding_completed=true.
+        8) DELETE /profile then GET re-creates fresh empty profile (overall=0.0, onboarding=false).
+        9) Cross-device isolation verified: dev_test_iter5_OTHER does NOT see dev_test_iter5's values (auto-creates its own empty profile).
+        10) /api/chat with X-Device-Id (profile populated) → 200; conversation_id/user_message/assistant_message all present; Claude responded successfully — no upstream budget block during this run.
+        11) Admin /api/admin/overview: 401 without token, 200 with kompas-admin-dev-2026.
+      No code changes were made. Both iter5 current_focus tasks marked working=true.

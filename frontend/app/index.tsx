@@ -10,6 +10,7 @@ import {
   Platform,
   ActivityIndicator,
   Keyboard,
+  Animated,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -48,7 +49,24 @@ export default function ChatScreen() {
   const [onboardingChecked, setOnboardingChecked] = useState(false);
   const [usage, setUsage] = useState<UsageSnapshot | null>(null);
   const [showPlusModal, setShowPlusModal] = useState(false);
+  const newChatToast = useRef(new Animated.Value(0)).current;
   const scrollRef = useRef<ScrollView>(null);
+
+  const flashNewChat = useCallback(() => {
+    Animated.sequence([
+      Animated.timing(newChatToast, { toValue: 1, duration: 180, useNativeDriver: true }),
+      Animated.delay(800),
+      Animated.timing(newChatToast, { toValue: 0, duration: 240, useNativeDriver: true }),
+    ]).start();
+  }, [newChatToast]);
+
+  const startNewChat = useCallback(() => {
+    setConversationId(null);
+    setMessages([]);
+    setDraft("");
+    Keyboard.dismiss();
+    flashNewChat();
+  }, [flashNewChat]);
 
   // First mount: route to /onboarding if not done yet, then load usage
   useEffect(() => {
@@ -170,16 +188,41 @@ export default function ChatScreen() {
         <Wordmark size={15} />
         <TouchableOpacity
           testID="chat-new-pencil"
-          onPress={() => {
-            setConversationId(null);
-            setMessages([]);
-            setDraft("");
-          }}
+          onPress={startNewChat}
           style={styles.iconBtn}
+          activeOpacity={0.6}
         >
           <Feather name="edit-2" size={20} color={palette.textPrimary} />
         </TouchableOpacity>
       </View>
+
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.toast,
+          {
+            opacity: newChatToast,
+            transform: [
+              {
+                translateY: newChatToast.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [-6, 0],
+                }),
+              },
+            ],
+          },
+        ]}
+      >
+        <View
+          style={[
+            styles.toastInner,
+            { backgroundColor: palette.surfaceElevated, borderColor: palette.borderSubtle },
+          ]}
+        >
+          <Feather name="check" size={12} color={palette.accent} />
+          <Text style={[styles.toastText, { color: palette.textPrimary }]}>Nieuw gesprek</Text>
+        </View>
+      </Animated.View>
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -315,7 +358,12 @@ export default function ChatScreen() {
             </TouchableOpacity>
             <TextInput
               testID="chat-input"
-              style={[styles.input, { color: palette.textPrimary }]}
+              style={[
+                styles.input,
+                { color: palette.textPrimary },
+                // Kill the default web focus outline (white square)
+                Platform.OS === "web" ? ({ outlineStyle: "none", outline: "none" } as any) : null,
+              ]}
               placeholder="Bericht Kompas"
               placeholderTextColor={palette.textMuted}
               value={draft}
@@ -323,6 +371,8 @@ export default function ChatScreen() {
               multiline
               maxLength={2000}
               editable={!sending}
+              underlineColorAndroid="transparent"
+              selectionColor={palette.accent}
             />
             {hasText ? (
               <TouchableOpacity
@@ -464,8 +514,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 9,
     borderRadius: 999,
-    borderWidth: 0.5,
+    borderTopWidth: 1,
+    borderLeftWidth: 0.5,
+    borderRightWidth: 0.5,
+    borderBottomWidth: 0.5,
     maxWidth: 180,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+        shadowOffset: { width: 0, height: 1 },
+      },
+      android: { elevation: 1 },
+    }),
   },
   quickChipText: {
     fontSize: 12.5,
@@ -525,8 +587,20 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     paddingHorizontal: 8,
     paddingVertical: 6,
-    borderWidth: 0.5,
+    borderTopWidth: 1,
+    borderLeftWidth: 0.5,
+    borderRightWidth: 0.5,
+    borderBottomWidth: 0.5,
     gap: 4,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOpacity: 0.25,
+        shadowRadius: 6,
+        shadowOffset: { width: 0, height: 2 },
+      },
+      android: { elevation: 1 },
+    }),
   },
   inputIconBtn: {
     width: 34,
@@ -548,6 +622,45 @@ const styles = StyleSheet.create({
     borderRadius: 17,
     alignItems: "center",
     justifyContent: "center",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#f59e0b",
+        shadowOpacity: 0.35,
+        shadowRadius: 6,
+        shadowOffset: { width: 0, height: 2 },
+      },
+      android: { elevation: 2 },
+    }),
+  },
+  toast: {
+    position: "absolute",
+    top: 52,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    zIndex: 30,
+  },
+  toastInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 999,
+    borderWidth: 0.5,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 3 },
+      },
+      android: { elevation: 4 },
+    }),
+  },
+  toastText: {
+    fontSize: 12,
+    fontWeight: "500",
   },
   subActions: {
     flexDirection: "row",

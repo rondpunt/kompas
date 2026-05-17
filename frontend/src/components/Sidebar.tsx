@@ -164,6 +164,21 @@ export function Sidebar({ visible, onClose, currentConversationId, onSelectConve
 
             <View style={[styles.bottomLinks, { borderTopColor: palette.borderSubtle }]}>
               <TouchableOpacity
+                testID="sidebar-link-profiel"
+                onPress={() => {
+                  onClose();
+                  router.push("/instellingen/profiel" as any);
+                }}
+                style={styles.linkRow}
+              >
+                <View style={styles.linkRowInner}>
+                  <Feather name="user" size={16} color={palette.textPrimary} />
+                  <Text style={[styles.linkText, { color: palette.textPrimary }]}>Profiel</Text>
+                </View>
+                <Feather name="chevron-right" size={16} color={palette.textMuted} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
                 testID="sidebar-link-zelftesten"
                 onPress={() => {
                   onClose();
