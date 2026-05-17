@@ -419,3 +419,14 @@ agent_communication:
       - Confirmation "Begin met Kompas" navigates to main chat (index.tsx)
       - Backend endpoints: POST /api/stripe/checkout-session, POST /api/onboarding/quiz
 
+  - agent: "main"
+    message: |
+      Iteratie 7 — Versnelde P0/P1 uitbreiding uitgevoerd.
+      Nieuwe scope om te testen:
+      1) Stripe checkout route gebruikt nu env/request-gedreven URLs en ondersteunt price_id OF dynamische recurring line_items.
+      2) AI Background Extraction na elke 10 user-berichten; suggestion verschijnt in ChatResponse als profile_suggestion.
+      3) Suggestie endpoints flow: GET /api/profile/suggestions + POST /api/profile/suggestions/confirm.
+      4) Memory toggle: GET/POST /api/profile/memory + gating in /api/chat (geen profielcontext/suggesties bij disabled).
+      5) Frontend: profielscherm toont geheugen-toggle; chat ondersteunt accept/reject van profile_suggestion.
+      Bekende beperking: huidige STRIPE_API_KEY in omgeving is ongeldig volgens Stripe, checkout blijft daardoor fallback/mock.
+

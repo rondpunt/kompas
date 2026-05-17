@@ -49,3 +49,28 @@
 - Alle 8 schermen visueel getest via screenshot-tool
 - Backend: 13/13 tests geslaagd (Stripe mock, quiz opslag)
 - Frontend: 9/9 items geslaagd na 1 bugfix (skip link ging naar main chat i.p.v. bevestigingsscherm)
+
+## 2026-05-17 — Versnelde P0/P1 upgrade (Stripe + Memory + Extractie)
+
+### Gebouwd
+- **Stripe checkout-flow verbeterd**:
+  - Geen hardcoded success/cancel URL meer (nu request/env-gedreven)
+  - Ondersteuning voor env price IDs (`STRIPE_PRICE_MONTHLY/ANNUAL`)
+  - Fallback naar dynamische recurring `price_data` als price IDs ontbreken
+  - Webhook slaat owner velden op (`owner_user_id`/`owner_device_id`) en plan metadata
+- **AI Background Extraction actief**:
+  - Na elke 10 user-berichten wordt 1 achtergrond-analyse uitgevoerd
+  - Nieuwe profielsuggesties worden als `pending` opgeslagen in `profile_suggestions`
+  - Suggestie verschijnt in chat met expliciete vraag: "Zal ik dit toevoegen aan je profiel?"
+- **RAG geheugen-toggle live**:
+  - Nieuwe API: `GET/POST /api/profile/memory`
+  - UI toggle in `Instellingen > Profiel > Privacy`
+  - Bij `memory_enabled=false` wordt profielcontext niet meer geïnjecteerd in `/api/chat`
+
+### Fixes
+- Profiel-owner helpers werken nu ook correct met dict-based user objecten
+- Onboarding quiz save gebruikt nu API-client met auth/device headers (geen anonieme owner-mismatch)
+
+### Bekende beperking
+- Huidige Stripe sleutel in omgeving (`sk_test_emergent`) wordt door Stripe als ongeldig afgewezen.
+  Daarom blijft checkout momenteel in **fallback/mock** tot een geldige key beschikbaar is.

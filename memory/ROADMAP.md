@@ -1,14 +1,15 @@
 # Roadmap — Kompas App
 
 ## P0 — Kritisch voor lancering
-- [ ] Stripe live keys configureren (sk_live_..., pk_live_...) voor echte betalingen
-- [ ] Stripe Price IDs aanmaken in Dashboard (maandelijks + jaarlijks)
-- [ ] `STRIPE_PRICE_MONTHLY` en `STRIPE_PRICE_ANNUAL` env vars instellen
+- [x] Stripe checkout route omgebouwd naar env/request-gedreven URLs (geen hardcoded domein)
+- [x] Stripe checkout ondersteunt zowel Price IDs als dynamische recurring line items
+- [ ] Geldige Stripe API key in omgeving zetten (huidige `sk_test_emergent` is ongeldig)
+- [ ] Optioneel: definitieve Price IDs (`STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_ANNUAL`) instellen voor productiebeheer
 
 ## P1 — Hoge prioriteit
-- [ ] RAG memory across sessions (vector embeddings in backend, memory UI toggle op frontend)
+- [~] RAG memory across sessions (memory UI toggle + backend gating klaar; vector embeddings nog open)
 - [ ] Post-onboarding profielvulling: automatisch quiz-data naar profielsecties mappen
-- [ ] AI Background Extraction: "Zal ik dit aan je profiel toevoegen?" tijdens gesprek
+- [x] AI Background Extraction: "Zal ik dit aan je profiel toevoegen?" tijdens gesprek
 - [ ] Slimme openings-prompts op homescherm op basis van profiel
 - [ ] Notificatie-toestemming scherm (contextueel, na 3de dag actief gebruik)
 
