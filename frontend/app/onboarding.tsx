@@ -150,7 +150,7 @@ export default function OnboardingScreen() {
             }}
             onSkip={() => {
               trackEvent('paywall_skipped');
-              finish();
+              goTo(7);
             }}
           />
         );
