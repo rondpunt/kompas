@@ -31,9 +31,19 @@ export interface KompasProfile {
   steun: any;
   levensbeschouwing: any;
   ai_derived: any;
+  memory_enabled?: boolean;
   onboarding_completed: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface ProfileSuggestion {
+  id: string;
+  field_path: string;
+  value: string | number | boolean | string[];
+  rationale?: string;
+  status: "pending" | "accepted" | "rejected";
+  created_at: string;
 }
 
 export type ProfileSectionKey =
@@ -82,5 +92,27 @@ export const profileApi = {
   },
   async deleteAll(): Promise<{ ok: boolean }> {
     return request<{ ok: boolean }>("/profile", { method: "DELETE" });
+  },
+  async getMemory(): Promise<{ enabled: boolean }> {
+    return request<{ enabled: boolean }>("/profile/memory");
+  },
+  async setMemory(enabled: boolean): Promise<{ ok: boolean; enabled: boolean }> {
+    return request<{ ok: boolean; enabled: boolean }>("/profile/memory", {
+      method: "POST",
+      body: JSON.stringify({ enabled }),
+    });
+  },
+  async listSuggestions(): Promise<ProfileSuggestion[]> {
+    return request<ProfileSuggestion[]>("/profile/suggestions");
+  },
+  async confirmSuggestion(payload: {
+    suggestion_id: string;
+    accept: boolean;
+    edited_value?: string | number | boolean | string[];
+  }): Promise<{ ok: boolean; accepted: boolean }> {
+    return request<{ ok: boolean; accepted: boolean }>("/profile/suggestions/confirm", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
   },
 };

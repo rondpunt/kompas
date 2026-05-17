@@ -7,8 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
 import { Feather } from '@expo/vector-icons';
 import { OB, OBFonts } from './ob-theme';
-
-const BASE = process.env.EXPO_PUBLIC_BACKEND_URL ?? '';
+import { api } from '@/src/api/client';
 
 interface Props {
   userId: string | null;
@@ -36,21 +35,11 @@ export function PaywallStep({ userId, onTrialStarted, onSkip }: Props) {
   const startTrial = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${BASE}/api/stripe/checkout-session`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan, user_id: userId ?? 'anonymous' }),
-      });
-      const data = await res.json();
+      const data = await api.createStripeCheckoutSession({ plan, user_id: userId ?? 'anonymous' });
       if (data.checkoutUrl) {
-        const result = await WebBrowser.openAuthSessionAsync(
-          data.checkoutUrl,
-          `${BASE}/onboarding/confirmation`
-        );
-        if (result.type === 'success' || result.type === 'dismiss') {
-          onTrialStarted(trialEnd.toISOString());
-          return;
-        }
+        await WebBrowser.openBrowserAsync(data.checkoutUrl);
+        onTrialStarted(trialEnd.toISOString());
+        return;
       }
     } catch {
       // Stripe not configured — graceful fallback: trial started locally
@@ -104,6 +93,7 @@ export function PaywallStep({ userId, onTrialStarted, onSkip }: Props) {
         {/* Plan toggle */}
         <View style={s.planToggle}>
           <TouchableOpacity
+            testID="paywall-plan-monthly"
             style={[s.planCard, plan === 'monthly' && s.planCardSelected]}
             onPress={() => setPlan('monthly')}
           >
@@ -111,6 +101,7 @@ export function PaywallStep({ userId, onTrialStarted, onSkip }: Props) {
             <Text style={s.planInterval}>per maand</Text>
           </TouchableOpacity>
           <TouchableOpacity
+            testID="paywall-plan-annual"
             style={[s.planCard, plan === 'annual' && s.planCardSelected]}
             onPress={() => setPlan('annual')}
           >
@@ -135,6 +126,7 @@ export function PaywallStep({ userId, onTrialStarted, onSkip }: Props) {
 
       <View style={s.ctaWrap}>
         <TouchableOpacity
+          testID="paywall-start-trial"
           style={[s.ctaBtn, loading && { opacity: 0.7 }]}
           onPress={startTrial}
           disabled={loading}
@@ -142,7 +134,7 @@ export function PaywallStep({ userId, onTrialStarted, onSkip }: Props) {
         >
           <Text style={s.ctaText}>{loading ? 'Bezig...' : 'Start gratis trial →'}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={s.skipBtn} onPress={onSkip}>
+        <TouchableOpacity testID="paywall-skip" style={s.skipBtn} onPress={onSkip}>
           <Text style={s.skipText}>Liever anoniem verder zonder Plus-functies</Text>
         </TouchableOpacity>
       </View>

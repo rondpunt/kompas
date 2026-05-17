@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Platform,
   Alert,
+  Switch,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -39,18 +40,38 @@ export default function ProfielIndex() {
   const [data, setData] = useState<ProfileFetchResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const [memoryEnabled, setMemoryEnabled] = useState(true);
+  const [memorySaving, setMemorySaving] = useState(false);
 
   const load = useCallback(async () => {
     try {
       setErr(null);
       const res = await profileApi.get();
       setData(res);
+      setMemoryEnabled(res.profile.memory_enabled ?? true);
     } catch (e: any) {
       setErr(e?.message ?? "laden mislukt");
     } finally {
       setLoading(false);
     }
   }, []);
+
+  const toggleMemory = useCallback(
+    async (next: boolean) => {
+      if (memorySaving) return;
+      setMemorySaving(true);
+      setMemoryEnabled(next);
+      try {
+        const res = await profileApi.setMemory(next);
+        setMemoryEnabled(res.enabled);
+      } catch {
+        setMemoryEnabled((prev) => !prev);
+      } finally {
+        setMemorySaving(false);
+      }
+    },
+    [memorySaving],
+  );
 
   useEffect(() => {
     load();
@@ -194,6 +215,30 @@ export default function ProfielIndex() {
             <Text style={[styles.privacyHeader, { color: palette.textMuted }]}>
               PRIVACY
             </Text>
+            <View
+              testID="profile-memory-row"
+              style={[
+                styles.privacyRow,
+                {
+                  borderTopColor: palette.borderSubtle,
+                  borderBottomColor: palette.borderSubtle,
+                },
+              ]}
+            >
+              <Feather name="cpu" size={15} color={palette.textPrimary} />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.privacyRowText, { color: palette.textPrimary }]}>Geheugen tussen gesprekken</Text>
+                <Text style={[styles.memoryHint, { color: palette.textMuted }]}>Als dit uit staat, gebruikt Kompas geen profielcontext.</Text>
+              </View>
+              <Switch
+                testID="profile-memory-toggle"
+                value={memoryEnabled}
+                disabled={memorySaving}
+                onValueChange={toggleMemory}
+                trackColor={{ false: palette.borderDefault, true: palette.accent + "66" }}
+                thumbColor={memoryEnabled ? palette.accent : palette.surfaceHigher}
+              />
+            </View>
             <TouchableOpacity
               testID="profile-export"
               onPress={async () => {
@@ -349,6 +394,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0.5,
   },
   privacyRowText: { flex: 1, fontSize: 14 },
+  memoryHint: { fontSize: 11.5, marginTop: 2, lineHeight: 15 },
   foot: {
     fontSize: 11,
     textAlign: "center",

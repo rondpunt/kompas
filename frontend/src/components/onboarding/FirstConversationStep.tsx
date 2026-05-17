@@ -16,6 +16,16 @@ interface Props {
 
 function buildOpener(intentions: string[], mood: string | null): string {
   let text = 'Hoi. Ik ben hier om te luisteren naar wat er bij je leeft.\n\n';
+
+  const firstIntent = intentions[0]?.toLowerCase() ?? '';
+  if (firstIntent.includes('moeilijke situatie')) {
+    text += 'Je wilt iets moeilijks verwerken — we kunnen dat stap voor stap doen.\n\n';
+  } else if (firstIntent.includes('begrijpen waarom')) {
+    text += 'Je zoekt vooral helderheid over wat er onder zit.\n\n';
+  } else if (firstIntent.includes('hulp bij')) {
+    text += 'Je zoekt houvast bij iets waar je mee vastloopt.\n\n';
+  }
+
   if (mood && !mood.includes('liever niet')) {
     if (mood.includes('zwaar') || mood.includes('uitgeput')) {
       text += 'Het klinkt alsof de laatste weken zwaar zijn geweest.\n\n';
@@ -82,7 +92,7 @@ export function FirstConversationStep({ intentions, mood, onComplete, onSkip }: 
           <Text style={s.headerTitle}>Kompas</Text>
           <Text style={s.headerSub}>Luistert, vraagt door</Text>
         </View>
-        <TouchableOpacity style={s.skipBtn} onPress={onSkip}>
+        <TouchableOpacity testID="onboarding-conversation-skip" style={s.skipBtn} onPress={onSkip}>
           <Text style={s.skipText}>Overslaan</Text>
         </TouchableOpacity>
       </View>
@@ -127,6 +137,7 @@ export function FirstConversationStep({ intentions, mood, onComplete, onSkip }: 
             {SUGGESTIONS.map((s2) => (
               <TouchableOpacity
                 key={s2}
+                testID={`onboarding-suggestion-${s2.slice(0, 12).toLowerCase().replace(/\s+/g, '-')}`}
                 style={s.suggestionChip}
                 onPress={() => { setDraft(s2); }}
               >
@@ -142,7 +153,7 @@ export function FirstConversationStep({ intentions, mood, onComplete, onSkip }: 
             <TouchableOpacity style={s.ctaSecondary} onPress={() => {}}>
               <Text style={s.ctaSecText}>Gesprek bewaren</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={s.ctaPrimary} onPress={() => onComplete(conversationId)}>
+            <TouchableOpacity testID="onboarding-conversation-continue" style={s.ctaPrimary} onPress={() => onComplete(conversationId)}>
               <Text style={s.ctaPriText}>Bekijk wat Kompas biedt →</Text>
             </TouchableOpacity>
           </Animated.View>
@@ -150,6 +161,7 @@ export function FirstConversationStep({ intentions, mood, onComplete, onSkip }: 
 
         <View style={s.inputRow}>
           <TextInput
+            testID="onboarding-conversation-input"
             style={s.input}
             value={draft}
             onChangeText={setDraft}
@@ -160,6 +172,7 @@ export function FirstConversationStep({ intentions, mood, onComplete, onSkip }: 
             returnKeyType="default"
           />
           <TouchableOpacity
+            testID="onboarding-conversation-send"
             style={[s.sendBtn, (!draft.trim() || sending) && s.sendBtnDisabled]}
             onPress={send}
             disabled={!draft.trim() || sending}

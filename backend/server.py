@@ -5,6 +5,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 import httpx
+import json
 from pathlib import Path
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
@@ -36,11 +37,13 @@ MODEL_PROVIDER = "anthropic"
 MODEL_NAME = "claude-sonnet-4-5-20250929"
 
 # Stripe — uses Emergent-managed key
-_stripe_key = os.environ.get('STRIPE_API_KEY', '')
+_stripe_key = os.environ.get('STRIPE_API_KEY', '') or 'sk_test_emergent'
 stripe.api_key = _stripe_key
 STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET', '')
 STRIPE_PRICE_MONTHLY = os.environ.get('STRIPE_PRICE_MONTHLY', '')
 STRIPE_PRICE_ANNUAL = os.environ.get('STRIPE_PRICE_ANNUAL', '')
+STRIPE_MONTHLY_AMOUNT_CENTS = int(os.environ.get('STRIPE_MONTHLY_AMOUNT_CENTS', '1299'))
+STRIPE_ANNUAL_AMOUNT_CENTS = int(os.environ.get('STRIPE_ANNUAL_AMOUNT_CENTS', '11999'))
 
 # Configure logging
 logging.basicConfig(
@@ -219,6 +222,20 @@ def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _frontend_base_url(request: Request) -> str:
+    env_base = os.environ.get("FRONTEND_BASE_URL") or os.environ.get("EXPO_PUBLIC_BACKEND_URL")
+    if env_base:
+        return env_base.rstrip("/")
+    origin = request.headers.get("origin")
+    if origin:
+        return origin.rstrip("/")
+    proto = request.headers.get("x-forwarded-proto") or request.url.scheme or "https"
+    host = request.headers.get("x-forwarded-host") or request.headers.get("host")
+    if host:
+        return f"{proto}://{host}".rstrip("/")
+    return str(request.base_url).rstrip("/")
+
+
 class Conversation(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     title: str = "Nieuw gesprek"
@@ -247,6 +264,7 @@ class ChatResponse(BaseModel):
     assistant_message: Message
     suggested_test_id: Optional[str] = None
     crisis_detected: bool = False
+    profile_suggestion: Optional[Dict[str, Any]] = None
 
 
 class NarrativeRequest(BaseModel):
@@ -644,7 +662,8 @@ async def auth_claim(req: ClaimRequest, user: Dict[str, Any] = Depends(require_u
 
 def _profile_owner_query(user, device_id):
     if user:
-        return {"owner_user_id": user.user_id}
+        user_id = user.get("user_id") if isinstance(user, dict) else getattr(user, "user_id", None)
+        return {"owner_user_id": user_id}
     if device_id:
         return {"owner_device_id": device_id, "owner_user_id": None}
     return None
@@ -667,10 +686,12 @@ async def _ensure_owner_profile(user, device_id) -> Dict[str, Any]:
     doc = await db.profiles.find_one(q, {"_id": 0})
     if doc:
         return doc
+    user_id = user.get("user_id") if isinstance(user, dict) else getattr(user, "user_id", None)
     fresh = Profile(
-        owner_user_id=user.user_id if user else None,
+        owner_user_id=user_id if user else None,
         owner_device_id=device_id if (device_id and not user) else None,
     ).model_dump()
+    fresh["memory_enabled"] = True
     await db.profiles.insert_one(fresh)
     # Re-fetch without _id so FastAPI can serialize it
     doc = await db.profiles.find_one(q, {"_id": 0})
@@ -711,6 +732,146 @@ class ProfileSuggestionConfirmRequest(BaseModel):
     suggestion_id: str
     accept: bool
     edited_value: Optional[Any] = None
+
+
+class ProfileMemoryToggleRequest(BaseModel):
+    enabled: bool
+
+
+ALLOWED_PROFILE_FIELD_PATHS = {
+    "basis.voornaam",
+    "basis.aanspreken",
+    "basis.voornaamwoorden",
+    "basis.geboortejaar",
+    "levenscontext.levenssituatie",
+    "levenscontext.kinderen",
+    "levenscontext.werksituatie",
+    "levenscontext.rollen",
+    "levenscontext.recente_transitie",
+    "communicatie.toon",
+    "communicatie.lengte",
+    "communicatie.humor",
+    "communicatie.vraag_stijl",
+    "communicatie.wat_helpt",
+    "communicatie.vermijd_zinnen",
+    "communicatie.pet_peeves",
+    "wat_werkt.energie_bronnen",
+    "wat_werkt.coping",
+    "wat_werkt.herstel_na_overprikkeling",
+    "wat_werkt.beste_tijd_dag",
+    "mentaal.hulpverlening",
+    "mentaal.diagnoses",
+    "mentaal.patronen",
+    "waarden.top_waarden",
+    "waarden.richting",
+    "waarden.trots",
+    "steun.vertrouwens_rollen",
+    "steun.crisis_contact",
+}
+
+
+def _normalize_profile_suggestion_value(value: Any) -> Any:
+    if value is None:
+        return None
+    if isinstance(value, (str, int, float, bool)):
+        return value
+    if isinstance(value, list):
+        cleaned = [v for v in value if isinstance(v, (str, int, float, bool))]
+        return cleaned[:5] if cleaned else None
+    return None
+
+
+async def _extract_background_profile_suggestions(
+    *,
+    user: Optional[Dict[str, Any]],
+    device_id: Optional[str],
+    profile_doc: Optional[Dict[str, Any]],
+    user_message: str,
+    conversation_id: str,
+) -> List[Dict[str, Any]]:
+    """Run lightweight extraction LLM call and persist pending suggestions."""
+    owner_q = _profile_owner_query(user, device_id)
+    if not owner_q:
+        return []
+
+    minimal_profile = {
+        "basis": (profile_doc or {}).get("basis", {}),
+        "communicatie": (profile_doc or {}).get("communicatie", {}),
+        "waarden": (profile_doc or {}).get("waarden", {}),
+    }
+    extraction_input = (
+        "Bestaand profiel (samenvatting JSON):\n"
+        + json.dumps(minimal_profile, ensure_ascii=False)
+        + "\n\n"
+        + "Nieuw gebruikersbericht:\n"
+        + user_message
+    )
+
+    extractor = LlmChat(
+        api_key=EMERGENT_LLM_KEY,
+        session_id=f"profile-extract-{uuid.uuid4().hex[:12]}",
+        system_message=PROFILE_EXTRACT_PROMPT,
+    ).with_model(MODEL_PROVIDER, MODEL_NAME)
+
+    try:
+        raw = await extractor.send_message(UserMessage(text=extraction_input))
+    except Exception as e:
+        logger.warning(f"Profile extraction skipped (LLM error): {e}")
+        return []
+
+    parsed: Dict[str, Any] = {}
+    try:
+        parsed = json.loads(raw)
+    except Exception:
+        try:
+            import re
+            m = re.search(r"\{[\s\S]*\}", raw)
+            if m:
+                parsed = json.loads(m.group(0))
+        except Exception:
+            parsed = {}
+
+    suggestions = parsed.get("suggestions", []) if isinstance(parsed, dict) else []
+    if not isinstance(suggestions, list):
+        return []
+
+    inserted: List[Dict[str, Any]] = []
+    owner_user_id = owner_q.get("owner_user_id")
+    owner_device_id = owner_q.get("owner_device_id")
+    for s in suggestions[:2]:
+        if not isinstance(s, dict):
+            continue
+        field_path = str(s.get("field_path", "")).strip()
+        if field_path not in ALLOWED_PROFILE_FIELD_PATHS:
+            continue
+        value = _normalize_profile_suggestion_value(s.get("value"))
+        if value is None:
+            continue
+        rationale = str(s.get("rationale", "")).strip()[:280]
+        dedupe_q = {
+            "field_path": field_path,
+            "value": value,
+            "status": {"$in": ["pending", "accepted"]},
+            **owner_q,
+        }
+        exists = await db.profile_suggestions.find_one(dedupe_q, {"_id": 0})
+        if exists:
+            continue
+        doc = {
+            "id": str(uuid.uuid4()),
+            "owner_user_id": owner_user_id,
+            "owner_device_id": owner_device_id,
+            "conversation_id": conversation_id,
+            "field_path": field_path,
+            "value": value,
+            "rationale": rationale,
+            "status": "pending",
+            "created_at": now_iso(),
+        }
+        await db.profile_suggestions.insert_one(doc)
+        inserted.append(doc)
+
+    return inserted
 
 
 @api_router.get("/profile")
@@ -787,6 +948,29 @@ async def export_profile(request: Request):
     return {"profile": doc or {}}
 
 
+@api_router.get("/profile/memory")
+async def get_profile_memory(request: Request):
+    user = await get_current_user(request)
+    device_id = request.headers.get("x-device-id") or request.headers.get("X-Device-Id")
+    doc = await _ensure_owner_profile(user, device_id)
+    return {"enabled": bool(doc.get("memory_enabled", True))}
+
+
+@api_router.post("/profile/memory")
+async def set_profile_memory(body: ProfileMemoryToggleRequest, request: Request):
+    user = await get_current_user(request)
+    device_id = request.headers.get("x-device-id") or request.headers.get("X-Device-Id")
+    q = _profile_owner_query(user, device_id)
+    if not q:
+        raise HTTPException(status_code=400, detail="no_owner")
+    await _ensure_owner_profile(user, device_id)
+    await db.profiles.update_one(
+        q,
+        {"$set": {"memory_enabled": body.enabled, "updated_at": now_iso()}},
+    )
+    return {"ok": True, "enabled": body.enabled}
+
+
 @api_router.delete("/profile")
 async def delete_profile(request: Request):
     user = await get_current_user(request)
@@ -856,13 +1040,18 @@ async def chat(req: ChatRequest, request: Request):
 
     # Load owner's profile + recent assessment summary for system-prompt context injection
     profile_doc = await _load_owner_profile(user, device_id)
+    memory_enabled = bool((profile_doc or {}).get("memory_enabled", True))
     recent_themes = (
         [t.get("tag") for t in (profile_doc.get("ai_derived", {}) or {}).get("terugkerende_themas", []) if t.get("tag")]
-        if profile_doc
+        if profile_doc and memory_enabled
         else []
     )
-    assess_summary = await _build_assessment_summary(user, device_id)
-    profile_context = build_profile_context(profile_doc, recent_themes=recent_themes, recent_assessment_summary=assess_summary)
+    assess_summary = await _build_assessment_summary(user, device_id) if memory_enabled else None
+    profile_context = (
+        build_profile_context(profile_doc, recent_themes=recent_themes, recent_assessment_summary=assess_summary)
+        if memory_enabled
+        else ""
+    )
     effective_system_prompt = KOMPAS_SYSTEM_PROMPT + (profile_context or "")
 
     # Get or create conversation
@@ -985,12 +1174,33 @@ async def chat(req: ChatRequest, request: Request):
         update_fields["title"] = title
     await db.conversations.update_one({"id": convo.id}, {"$set": update_fields})
 
+    profile_suggestion_payload = None
+    user_turn_count = sum(1 for d in history_docs if d.get("role") == "user")
+    if memory_enabled and user_turn_count > 0 and user_turn_count % 10 == 0:
+        extracted = await _extract_background_profile_suggestions(
+            user=user,
+            device_id=device_id,
+            profile_doc=profile_doc,
+            user_message=req.message,
+            conversation_id=convo.id,
+        )
+        if extracted:
+            s0 = extracted[0]
+            profile_suggestion_payload = {
+                "id": s0["id"],
+                "field_path": s0["field_path"],
+                "value": s0["value"],
+                "rationale": s0.get("rationale"),
+                "question": f'Ik heb iets opgemerkt: "{s0["value"]}". Zal ik dit toevoegen aan je profiel?',
+            }
+
     return ChatResponse(
         conversation_id=convo.id,
         user_message=user_msg,
         assistant_message=assistant_msg,
         suggested_test_id=None,
         crisis_detected=crisis_detected,
+        profile_suggestion=profile_suggestion_payload,
     )
 
 
@@ -1224,12 +1434,15 @@ async def admin_list_qa_test_suggestions(
 
 class CheckoutRequest(BaseModel):
     plan: str = "annual"   # "monthly" or "annual"
-    user_id: str = "anonymous"
+    user_id: Optional[str] = "anonymous"
 
 
 @api_router.post("/stripe/checkout-session")
-async def create_stripe_checkout(body: CheckoutRequest):
+async def create_stripe_checkout(body: CheckoutRequest, request: Request):
     """Create a Stripe Checkout Session for the Plus subscription (14-day trial)."""
+    user = await get_current_user(request)
+    device_id = request.headers.get("x-device-id") or request.headers.get("X-Device-Id")
+
     # Validate plan
     if body.plan not in ("monthly", "annual"):
         raise HTTPException(status_code=400, detail="Invalid plan")
@@ -1243,26 +1456,44 @@ async def create_stripe_checkout(body: CheckoutRequest):
             "message": "Stripe is niet geconfigureerd. Trial wordt lokaal gestart.",
         }
 
-    price_id = STRIPE_PRICE_MONTHLY if body.plan == "monthly" else STRIPE_PRICE_ANNUAL
-    if not price_id:
-        return {
-            "checkoutUrl": None,
-            "mock": True,
-            "message": "Stripe Price ID ontbreekt. Trial wordt lokaal gestart.",
-        }
+    owner_user_id = user.get("user_id") if user else None
+    owner_device_id = device_id if not user else None
+    reference_id = owner_user_id or owner_device_id or body.user_id or "anonymous"
+    metadata = {
+        "owner_user_id": owner_user_id or "",
+        "owner_device_id": owner_device_id or "",
+        "plan": body.plan,
+    }
 
-    frontend_url = os.environ.get("EXPO_PUBLIC_BACKEND_URL", "https://kompas-health-chat.preview.emergentagent.com")
+    price_id = STRIPE_PRICE_MONTHLY if body.plan == "monthly" else STRIPE_PRICE_ANNUAL
+    if price_id:
+        line_items = [{"price": price_id, "quantity": 1}]
+    else:
+        amount = STRIPE_MONTHLY_AMOUNT_CENTS if body.plan == "monthly" else STRIPE_ANNUAL_AMOUNT_CENTS
+        interval = "month" if body.plan == "monthly" else "year"
+        line_items = [{
+            "price_data": {
+                "currency": "eur",
+                "unit_amount": amount,
+                "recurring": {"interval": interval},
+                "product_data": {"name": "Kompas Plus"},
+            },
+            "quantity": 1,
+        }]
+
+    frontend_url = _frontend_base_url(request)
     try:
         session = stripe.checkout.Session.create(
             mode="subscription",
-            line_items=[{"price": price_id, "quantity": 1}],
+            line_items=line_items,
             subscription_data={"trial_period_days": 14},
             payment_method_types=["card", "bancontact"],
-            success_url=f"{frontend_url}/onboarding/confirmation?session_id={{CHECKOUT_SESSION_ID}}",
-            cancel_url=f"{frontend_url}/onboarding",
-            client_reference_id=body.user_id,
+            success_url=f"{frontend_url}/onboarding?stripe=success&session_id={{CHECKOUT_SESSION_ID}}",
+            cancel_url=f"{frontend_url}/onboarding?stripe=cancel",
+            client_reference_id=reference_id,
+            metadata=metadata,
         )
-        return {"checkoutUrl": session.url}
+        return {"checkoutUrl": session.url, "mock": False}
     except Exception as e:
         logger.error(f"Stripe checkout error: {e}")
         return {"checkoutUrl": None, "mock": True, "message": str(e)}
@@ -1285,18 +1516,30 @@ async def stripe_webhook(request: Request):
 
     event_type = event.get("type", "")
     data_obj = event.get("data", {}).get("object", {})
-    now = datetime.utcnow().isoformat()
+    now = now_iso()
 
     if event_type == "checkout.session.completed":
         sub_id = data_obj.get("subscription")
         if sub_id:
+            metadata = data_obj.get("metadata", {}) or {}
+            owner_user_id = metadata.get("owner_user_id") or None
+            owner_device_id = metadata.get("owner_device_id") or None
+            if not owner_user_id and not owner_device_id:
+                ref = data_obj.get("client_reference_id")
+                if ref and str(ref).startswith("user_"):
+                    owner_user_id = ref
+                elif ref:
+                    owner_device_id = ref
             await db.subscriptions.update_one(
                 {"stripe_subscription_id": sub_id},
                 {"$set": {
-                    "user_id": data_obj.get("client_reference_id"),
+                    "user_id": owner_user_id,
+                    "owner_user_id": owner_user_id,
+                    "owner_device_id": owner_device_id,
                     "stripe_customer_id": data_obj.get("customer"),
                     "stripe_subscription_id": sub_id,
                     "status": "trialing",
+                    "plan": metadata.get("plan"),
                     "updated_at": now,
                 }, "$setOnInsert": {"created_at": now}},
                 upsert=True,
@@ -1330,13 +1573,16 @@ async def stripe_webhook(request: Request):
 async def get_subscription(request: Request):
     """Return the current user's subscription status."""
     user = await get_current_user(request)
-    device_id = request.headers.get("X-Device-Id")
+    device_id = request.headers.get("x-device-id") or request.headers.get("X-Device-Id")
     q = _owner_query(user, device_id)
-    sub = await db.subscriptions.find_one(q, sort=[("updated_at", -1)])
+    if q.get("_no_owner_"):
+        return {"status": "none"}
+    sub = await db.subscriptions.find_one(q, {"_id": 0}, sort=[("updated_at", -1)])
     if not sub:
         return {"status": "none"}
     return {
         "status": sub.get("status", "none"),
+        "plan": sub.get("plan"),
         "trial_end": sub.get("trial_end"),
         "current_period_end": sub.get("current_period_end"),
     }
@@ -1356,9 +1602,12 @@ class OnboardingQuizRequest(BaseModel):
 async def save_onboarding_quiz(body: OnboardingQuizRequest, request: Request):
     """Persist quiz answers from the onboarding flow to the user's profile."""
     user = await get_current_user(request)
-    device_id = request.headers.get("X-Device-Id")
-    q = _owner_query(user, device_id)
-    now = datetime.utcnow().isoformat()
+    device_id = request.headers.get("x-device-id") or request.headers.get("X-Device-Id")
+    q = _profile_owner_query(user, device_id)
+    if not q:
+        raise HTTPException(status_code=400, detail="no_owner")
+    await _ensure_owner_profile(user, device_id)
+    now = now_iso()
     await db.profiles.update_one(
         q,
         {"$set": {
@@ -1369,9 +1618,6 @@ async def save_onboarding_quiz(body: OnboardingQuizRequest, request: Request):
                 "completed_at": now,
             },
             "updated_at": now,
-        }, "$setOnInsert": {
-            "created_at": now,
-            **_owner_fields(user, device_id),
         }},
         upsert=True,
     )

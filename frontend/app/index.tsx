@@ -23,6 +23,7 @@ import { SecureHandshake } from "@/src/components/SecureHandshake";
 import { PlusHintBanner } from "@/src/components/PlusHintBanner";
 import { PlusModal } from "@/src/components/PlusModal";
 import { api, ApiMessage, ChatResponse } from "@/src/api/client";
+import { profileApi } from "@/src/api/profile";
 import { hasOnboarded } from "./onboarding";
 import { bumpMessageCount, dismissPlusHint, getUsage, UsageSnapshot } from "@/src/utils/usage";
 import { storage } from "@/src/utils/storage";
@@ -39,6 +40,14 @@ const QUICK_PROMPTS = [
   { id: "piekeren", icon: "wind", label: "Ik blijf piekeren" },
 ] as const;
 
+type PendingProfileSuggestion = {
+  id: string;
+  field_path: string;
+  value: string | number | boolean | string[];
+  rationale?: string;
+  question: string;
+};
+
 export default function ChatScreen() {
   const { palette } = useTheme();
   const router = useRouter();
@@ -53,6 +62,8 @@ export default function ChatScreen() {
   const [onboardingChecked, setOnboardingChecked] = useState(false);
   const [usage, setUsage] = useState<UsageSnapshot | null>(null);
   const [showPlusModal, setShowPlusModal] = useState(false);
+  const [pendingSuggestion, setPendingSuggestion] = useState<PendingProfileSuggestion | null>(null);
+  const [confirmingSuggestion, setConfirmingSuggestion] = useState<"accept" | "reject" | null>(null);
   const newChatToast = useRef(new Animated.Value(0)).current;
   const scrollRef = useRef<ScrollView>(null);
 
@@ -68,6 +79,7 @@ export default function ChatScreen() {
     setConversationId(null);
     setMessages([]);
     setDraft("");
+    setPendingSuggestion(null);
     Keyboard.dismiss();
     flashNewChat();
   }, [flashNewChat]);
@@ -140,6 +152,7 @@ export default function ChatScreen() {
           const withoutOpt = prev.filter((m) => m.id !== optimisticUser.id);
           return [...withoutOpt, res.user_message, res.assistant_message];
         });
+        setPendingSuggestion((res.profile_suggestion as PendingProfileSuggestion | null) ?? null);
         // Track usage for soft-paywall — count user-sent messages
         await bumpMessageCount();
         const u = await getUsage();
@@ -172,6 +185,46 @@ export default function ChatScreen() {
     const u = await getUsage();
     setUsage(u);
   }, []);
+
+  const handleSuggestionDecision = useCallback(
+    async (accept: boolean) => {
+      if (!pendingSuggestion || confirmingSuggestion) return;
+      setConfirmingSuggestion(accept ? "accept" : "reject");
+      try {
+        await profileApi.confirmSuggestion({
+          suggestion_id: pendingSuggestion.id,
+          accept,
+        });
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `sug-${Date.now()}`,
+            conversation_id: conversationId ?? "",
+            role: "assistant",
+            content: accept
+              ? "Top, ik heb dit toegevoegd aan je profiel."
+              : "Helemaal goed, ik sla dit niet op.",
+            created_at: new Date().toISOString(),
+          },
+        ]);
+        setPendingSuggestion(null);
+      } catch {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `sugerr-${Date.now()}`,
+            conversation_id: conversationId ?? "",
+            role: "assistant",
+            content: "Dat lukte niet meteen. Probeer nog eens.",
+            created_at: new Date().toISOString(),
+          },
+        ]);
+      } finally {
+        setConfirmingSuggestion(null);
+      }
+    },
+    [pendingSuggestion, confirmingSuggestion, conversationId],
+  );
 
   useEffect(() => {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60);
@@ -341,6 +394,54 @@ export default function ChatScreen() {
                     },
                   ]}
                 />
+              </View>
+            )}
+
+            {pendingSuggestion && (
+              <View
+                testID="chat-profile-suggestion-card"
+                style={[
+                  styles.suggestionCard,
+                  {
+                    backgroundColor: palette.surfaceElevated,
+                    borderColor: palette.borderSubtle,
+                  },
+                ]}
+              >
+                <Text style={[styles.suggestionLabel, { color: palette.accent }]}>Slim geheugenvoorstel</Text>
+                <Text style={[styles.suggestionQuestion, { color: palette.textPrimary }]}>
+                  {pendingSuggestion.question}
+                </Text>
+                {pendingSuggestion.rationale ? (
+                  <Text style={[styles.suggestionRationale, { color: palette.textMuted }]}>
+                    Waarom: {pendingSuggestion.rationale}
+                  </Text>
+                ) : null}
+                <View style={styles.suggestionActions}>
+                  <TouchableOpacity
+                    testID="chat-profile-suggestion-reject"
+                    disabled={!!confirmingSuggestion}
+                    onPress={() => handleSuggestionDecision(false)}
+                    style={[
+                      styles.suggestionBtnGhost,
+                      { borderColor: palette.borderDefault, opacity: confirmingSuggestion ? 0.6 : 1 },
+                    ]}
+                  >
+                    <Text style={[styles.suggestionBtnGhostText, { color: palette.textPrimary }]}>Nee</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    testID="chat-profile-suggestion-accept"
+                    disabled={!!confirmingSuggestion}
+                    onPress={() => handleSuggestionDecision(true)}
+                    style={[styles.suggestionBtnPrimary, { backgroundColor: palette.accent, opacity: confirmingSuggestion ? 0.6 : 1 }]}
+                  >
+                    {confirmingSuggestion === "accept" ? (
+                      <ActivityIndicator size="small" color="#0a0a0a" />
+                    ) : (
+                      <Text style={styles.suggestionBtnPrimaryText}>Ja, toevoegen</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
               </View>
             )}
           </ScrollView>
@@ -699,5 +800,57 @@ const styles = StyleSheet.create({
   },
   subActionText: {
     fontSize: 12,
+  },
+  suggestionCard: {
+    borderWidth: 0.5,
+    borderRadius: 14,
+    padding: 12,
+    marginTop: 8,
+    marginBottom: 6,
+  },
+  suggestionLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+    marginBottom: 6,
+  },
+  suggestionQuestion: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 6,
+  },
+  suggestionRationale: {
+    fontSize: 12,
+    lineHeight: 17,
+    marginBottom: 10,
+  },
+  suggestionActions: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  suggestionBtnGhost: {
+    flex: 1,
+    minHeight: 42,
+    borderRadius: 12,
+    borderWidth: 0.5,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  suggestionBtnGhostText: {
+    fontSize: 13,
+    fontWeight: "500",
+  },
+  suggestionBtnPrimary: {
+    flex: 1.5,
+    minHeight: 42,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  suggestionBtnPrimaryText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#0a0a0a",
   },
 });

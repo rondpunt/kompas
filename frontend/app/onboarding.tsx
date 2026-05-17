@@ -8,6 +8,7 @@ import { useAuth } from '@/src/auth/AuthContext';
 import { storage } from '@/src/utils/storage';
 import { useOnboardingStore } from '@/src/stores/onboardingStore';
 import { trackEvent } from '@/src/utils/posthog';
+import { api } from '@/src/api/client';
 
 import { WelcomeStep } from '@/src/components/onboarding/WelcomeStep';
 import { QuizStep, QUIZ_INTENT, QUIZ_MOOD, QUIZ_THERAPY } from '@/src/components/onboarding/QuizStep';
@@ -31,15 +32,10 @@ export default function OnboardingScreen() {
   const finish = useCallback(async () => {
     // Sla quiz-data op in backend (best effort)
     try {
-      const base = process.env.EXPO_PUBLIC_BACKEND_URL ?? '';
-      await fetch(`${base}/api/onboarding/quiz`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          intentions: store.intentions,
-          mood: store.currentMood,
-          therapy_experience: store.therapyExperience,
-        }),
+      await api.saveOnboardingQuiz({
+        intentions: store.intentions,
+        mood: store.currentMood,
+        therapy_experience: store.therapyExperience,
       });
     } catch {}
 

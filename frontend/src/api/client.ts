@@ -54,6 +54,13 @@ export interface ChatResponse {
   assistant_message: ApiMessage;
   suggested_test_id?: string | null;
   crisis_detected: boolean;
+  profile_suggestion?: {
+    id: string;
+    field_path: string;
+    value: string | number | boolean | string[];
+    rationale?: string;
+    question: string;
+  } | null;
 }
 
 export const api = {
@@ -117,4 +124,16 @@ export const api = {
     const qs = assessment_id ? `?assessment_id=${assessment_id}` : "";
     return request<any[]>(`/assessment-results${qs}`);
   },
+
+  createStripeCheckoutSession: (req: { plan: "monthly" | "annual"; user_id?: string | null }) =>
+    request<{ checkoutUrl: string | null; mock?: boolean; message?: string }>("/stripe/checkout-session", {
+      method: "POST",
+      body: JSON.stringify(req),
+    }),
+
+  saveOnboardingQuiz: (req: { intentions: string[]; mood?: string | null; therapy_experience?: string | null }) =>
+    request<{ ok: boolean }>("/onboarding/quiz", {
+      method: "POST",
+      body: JSON.stringify(req),
+    }),
 };
