@@ -1,238 +1,117 @@
 {
-  "app_metadata": {
-    "name": "Kompas",
-    "tagline": "Voor wat speelt.",
-    "wordmark_concept": "•Kompas",
-    "wordmark_specs": "Small dot same color as text, 5px wide. Text: 15px weight 600 letter-spacing -0.3px",
-    "icon_concept": "White circle on black square with thin line as compass needle",
-    "audience": "Belgian Dutch (België) adults 25-50",
-    "philosophy": "Adult, calm, premium, late-night. Anti-self-optimization, anti-toxic-positivity, 'verwijlen' (linger)."
+  "theme": "dark",
+  "archetype": "5 (Jewel & Luxury) - Warm Dark Variant",
+  "design_philosophy": {
+    "core": "A safe, anonymous, and highly premium space. It should feel like an exclusive nighttime lounge for honest conversations, not a chaotic public square.",
+    "emotion": "Empathetic, grounded, secure, and premium.",
+    "rules": [
+      "No harsh tech blues or pure blacks. Use warm espresso and charcoal bases.",
+      "Negative space is mandatory to give emotional weight to personal stories.",
+      "Premium features must feel luxurious—use glowing gold/amber tracing beams and blurred frosted glass over locked content."
+    ]
   },
-  "global_rules": {
-    "text_case": "Sentence case overall. No TITLE CASE or ALL CAPS (except PLUS badge and eyebrow text).",
-    "icons": "Lucide outline-style only. No emojis anywhere in UI text. NO exclamation-mark spam.",
-    "animations": "Minimal. 200ms fade for page transitions. Modals slide-up. Streaming AI: typewriter cursor 4px×16px, 1Hz blink. Respect prefers-reduced-motion.",
-    "navigation": "No bottom navigation tabs. Everything via sidebar or contextual via chat. ChatGPT-clean UI.",
-    "anti_patterns": "NO mood-tracker with badges, NO exercise library, NO DBT toolbox visible.",
-    "testing": "All interactive and key informational elements MUST include a data-testid attribute."
-  },
-  "design_tokens": {
-    "colors": {
-      "Night": {
-        "background": "#0a0a0a",
-        "surface_elevated": "#161616",
-        "surface_higher": "#1f1f1f",
-        "border_subtle": "#1f1f1f",
-        "border_default": "#262626",
-        "border_emphasis": "#383838",
-        "text_primary": "#fafafa",
-        "text_secondary": "#a3a3a3",
-        "text_muted": "#737373",
-        "text_faint": "#525252",
-        "accent_premium": "#f59e0b",
-        "accent_soft": "#41240240",
-        "success": "#84cc16",
-        "success_bg": "#1a3309",
-        "warning": "#FAC775",
-        "danger": "#ef4444",
-        "danger_bg": "#450a0a"
-      },
-      "Klaar": {
-        "background": "#ffffff",
-        "surface_elevated": "#f4f4f4",
-        "surface_higher": "#ececec",
-        "border_subtle": "#ececec",
-        "border_default": "#e0e0e0",
-        "border_emphasis": "#c8c8c8",
-        "text_primary": "#0d0d0d",
-        "text_secondary": "#525252",
-        "text_muted": "#737373",
-        "text_faint": "#a3a3a3",
-        "accent_premium": "#d97706",
-        "accent_soft": "#faeeda",
-        "success": "#4d7c0f",
-        "success_bg": "#ecfccb",
-        "warning": "#854F0B",
-        "danger": "#b91c1c",
-        "danger_bg": "#fee2e2"
-      }
+  "typography": {
+    "strategy": "The 'Soft Utility' + 'Editorial Future' blend.",
+    "fonts": {
+      "heading": "Outfit",
+      "body": "Manrope",
+      "mono": "JetBrains Mono"
     },
-    "typography": {
-      "stack": "System UI (San Francisco / Roboto)",
-      "weights": {
-        "regular": "400",
-        "medium": "500",
-        "bold": "700"
-      },
-      "styles": {
-        "body": { "fontSize": 15, "lineHeight": 23.25, "letterSpacing": -0.1, "fontWeight": "400" },
-        "secondary": { "fontSize": 13, "fontWeight": "400" },
-        "caption_eyebrow": { "fontSize": 11, "letterSpacing": 0.5, "fontWeight": "500", "textTransform": "uppercase" },
-        "empty_state_headline": { "fontSize": 26, "fontWeight": "500" },
-        "test_result_score": { "fontSize": 42, "fontWeight": "300", "letterSpacing": -1.5 },
-        "section_title": { "fontSize": 21, "fontFamily": "Georgia", "fontStyle": "italic" },
-        "context_italic": { "fontSize": 17, "fontFamily": "Georgia", "fontStyle": "italic" }
-      },
-      "rules": {
-        "georgia_usage": "Georgia italic ONLY for empty-states, test-result category context, and trend titles.",
-        "weight_restrictions": "Only use 400 regular and 500 medium weights. NO 600/700 (except for PLUS badge which is 700)."
-      }
-    },
-    "spacing": {
-      "tap_target_min": 44,
-      "tap_target_padding": 8,
-      "padding_base": 16,
-      "gap_small": 8,
-      "gap_medium": 16,
-      "gap_large": 24
+    "hierarchy": {
+      "h1": "text-4xl sm:text-5xl font-light tracking-tight text-brand-offwhite",
+      "h2": "text-2xl sm:text-3xl font-medium tracking-tight text-brand-offwhite",
+      "h3": "text-xl sm:text-2xl font-medium text-brand-muted",
+      "body": "text-base leading-relaxed text-brand-body",
+      "small": "text-sm text-brand-muted",
+      "overline": "text-xs font-bold uppercase tracking-[0.2em] text-brand-accent"
     }
+  },
+  "colors": {
+    "background": {
+      "default": "#0B0A09",
+      "surface": "#141312",
+      "surface_elevated": "#1C1A19"
+    },
+    "text": {
+      "primary": "#F4F0EB",
+      "secondary": "#A39C96",
+      "disabled": "#5C5753"
+    },
+    "brand": {
+      "accent": "#E69D45",
+      "accent_hover": "#F0B665",
+      "accent_muted": "rgba(230, 157, 69, 0.15)",
+      "premium_glow": "#D4AF37"
+    },
+    "utility": {
+      "border": "rgba(244, 240, 235, 0.08)",
+      "border_hover": "rgba(244, 240, 235, 0.15)"
+    }
+  },
+  "layout_and_spacing": {
+    "strategy": "Mobile-First 'Control Room' for feed + Generous Spacing.",
+    "spacing_scale": "Tailwind standard, prioritize p-4, p-6 for feed items, gap-6 between posts.",
+    "navigation": "Fixed bottom bar on mobile (Crystal Glass: backdrop-blur-xl bg-background/70 border-t border-border).",
+    "feed": "Max-width wrapper (md:max-w-xl mx-auto) to maintain a focused column layout even on desktop.",
+    "borders": "1px solid strokes (border-border), no soft drop shadows. Flat and crisp."
   },
   "components": {
-    "icons": {
-      "library": "lucide-react-native",
-      "style": "outline-style only",
-      "sizes": {
-        "inline": 14,
-        "header": 20,
-        "tap_target": 24
-      },
-      "categories": {
-        "Stemming": { "name": "CloudRain", "tint": "amber-900" },
-        "Angst": { "name": "Wind", "tint": "blue-900" },
-        "ADHD": { "name": "Zap", "tint": "purple-900" },
-        "Autisme": { "name": "Layers", "tint": "teal-900" },
-        "Borderline": { "name": "Waves", "tint": "pink-900" },
-        "Trauma": { "name": "ShieldCheck", "tint": "coral-900" },
-        "OCD": { "name": "RotateCw", "tint": "gray-800" },
-        "Eten": { "name": "Apple", "tint": "green-900" },
-        "Verslaving": { "name": "Wine", "tint": "red-900" },
-        "Sociaal": { "name": "Users", "tint": "blue-800" },
-        "Welzijn": { "name": "Sun", "tint": "amber-800" },
-        "Persoonlijkheid": { "name": "Heart", "tint": "purple-800" }
-      },
-      "rules": "In Klaar mode use 50-100 stops for tint. Ensure tap targets have minimum 44x44 bounds with padding."
+    "feed_post": {
+      "description": "Individual anonymous text post.",
+      "styling": "border-b border-border bg-transparent p-6 flex flex-col gap-3",
+      "avatar": "Abstract generated image, rounded-full w-10 h-10 border border-border",
+      "actions": "flex gap-4 mt-2 text-brand-muted hover:text-brand-accent transition-colors"
     },
-    "buttons": {
-      "primary": { "height": 42, "borderRadius": 13, "backgroundColor": "text_primary", "color": "background" },
-      "secondary": { "height": 42, "borderRadius": 13, "borderWidth": 0.5, "borderColor": "border_default", "backgroundColor": "transparent" },
-      "ghost": { "backgroundColor": "transparent", "color": "text_primary" },
-      "send_active": { "size": 32, "borderRadius": 16, "backgroundColor": "accent_premium", "alignItems": "center", "justifyContent": "center" }
+    "premium_upsell": {
+      "description": "Paywall entrypoint inside the feed or DMs.",
+      "styling": "relative overflow-hidden rounded-2xl bg-surface_elevated p-8 border border-brand-accent/30 shadow-[0_0_40px_rgba(230,157,69,0.1)]",
+      "effect": "'Tracing Beam' border effect, or subtle gold radial gradient background.",
+      "button": "bg-brand-accent text-[#0B0A09] font-medium px-6 py-3 rounded-full hover:bg-accent_hover w-full transition-all"
     },
-    "cards": {
-      "default": { "backgroundColor": "surface_elevated", "borderWidth": 0.5, "borderColor": "border_default", "borderRadius": 14, "padding": 12, "shadow": "none" }
+    "bottom_nav": {
+      "description": "Mobile-first primary navigation.",
+      "styling": "fixed bottom-0 left-0 right-0 h-16 backdrop-blur-2xl bg-[#0B0A09]/80 border-t border-border flex justify-around items-center z-50",
+      "items": "Feed (Home), Post (+), DMs (Messages), Profile (Premium Status)"
     },
-    "badges": {
-      "premium_plus": { "backgroundColor": "accent_premium", "color": "#0a0a0a", "fontSize": 9, "fontWeight": "700", "letterSpacing": 0.5, "paddingVertical": 2, "paddingHorizontal": 5, "borderRadius": 4 }
-    },
-    "pills": {
-      "default": { "paddingVertical": 5, "paddingHorizontal": 11, "borderRadius": 999 },
-      "inactive": { "backgroundColor": "surface_elevated", "borderWidth": 1, "borderColor": "border_subtle", "color": "text_muted" },
-      "active": { "backgroundColor": "accent_soft", "borderWidth": 1, "borderColor": "accent_premium", "color": "accent_premium" },
-      "score_laag": { "backgroundColor": "success_bg", "color": "success", "fontSize": 10.5, "fontWeight": "500", "paddingVertical": 2, "paddingHorizontal": 8, "borderRadius": 999 },
-      "score_matig": { "backgroundColor": "accent_soft", "color": "accent_premium", "fontSize": 10.5, "fontWeight": "500", "paddingVertical": 2, "paddingHorizontal": 8, "borderRadius": 999 },
-      "score_hoog": { "backgroundColor": "danger_bg", "color": "danger", "fontSize": 10.5, "fontWeight": "500", "paddingVertical": 2, "paddingHorizontal": 8, "borderRadius": 999 }
-    },
-    "input_area": {
-      "bottom_fixed_pill": { "backgroundColor": "surface_elevated", "minHeight": 48, "borderRadius": 28, "paddingVertical": 6, "paddingHorizontal": 14, "flexDirection": "row", "alignItems": "center" }
+    "create_post": {
+      "description": "Form to write a new anonymous post.",
+      "styling": "bg-surface p-6 rounded-2xl border border-border",
+      "input": "bg-transparent border-none text-xl text-primary placeholder:text-disabled resize-none focus:ring-0"
     }
   },
-  "screens": {
-    "ChatScreen": {
-      "route": "/",
-      "top_bar": {
-        "height": 48,
-        "borderBottomWidth": 0.5,
-        "borderColor": "border_default",
-        "left": "Hamburger menu icon (opens sidebar)",
-        "center": "Wordmark •Kompas (15px, 600 weight, -0.3px letter spacing)",
-        "right": "Edit-pencil icon (new chat)"
+  "media": {
+    "images": [
+      {
+        "slug": "premium_bg_texture",
+        "url": "https://static.prod-images.emergentagent.com/jobs/112e74bf-4ac3-4dbd-abdf-fffa530fad01/images/f74e1a7b547d519f25061daf7c37ec24ce0839556315fd54117d0c7d5fd2ec97.png",
+        "category": "background",
+        "description": "Use as a subtle overlay or hero background for the Premium Upsell page."
       },
-      "empty_state": { "text": "Wat speelt er?", "alignment": "vertically centered", "typography": "26px weight 500 (Georgia italic ONLY if explicitly required by rule, else System UI)" },
-      "active_conversation": {
-        "maxWidth": 672,
-        "alignSelf": "center",
-        "paddingHorizontal": 16,
-        "paddingVertical": 20,
-        "user_message": { "alignSelf": "flex-end", "maxWidth": "80%", "borderRadius": 24, "backgroundColor": "surface_elevated", "padding": 12, "fontSize": 15, "lineHeight": 23.25 },
-        "ai_message": { "alignSelf": "flex-start", "maxWidth": "96%", "backgroundColor": "transparent", "fontSize": 15, "lineHeight": 23.25 },
-        "vertical_spacing": 18
+      {
+        "slug": "avatar_1",
+        "url": "https://static.prod-images.emergentagent.com/jobs/112e74bf-4ac3-4dbd-abdf-fffa530fad01/images/4fd24913c99a1502c09c3330c26229985f9e5a0be7762c8e3bb0c543fa9c75a0.png",
+        "category": "avatar",
+        "description": "Default anonymous profile picture for Feed Posts."
       },
-      "input_area": {
-        "position": "absolute bottom",
-        "backgroundColor": "surface_elevated",
-        "borderRadius": 28,
-        "paddingHorizontal": 14,
-        "paddingVertical": 6,
-        "minHeight": 48,
-        "left": "+ icon (attachment)",
-        "middle": "textarea auto-grow up to 4 lines, placeholder 'Bericht Kompas'",
-        "right": "microphone icon, OR send button (32px primary-fill circle with arrow-up) if text exists",
-        "actions_below": "Spraak and Foto text-buttons centered below input, 12.5px text-muted icons"
-      }
-    },
-    "TestSuggestiePill": {
-      "usage": "Inline in chat after AI message, max 1 per conversation",
-      "layout": { "borderWidth": 0.5, "borderColor": "border_default", "backgroundColor": "surface_elevated", "borderRadius": 13, "padding": 10, "flexDirection": "row", "alignItems": "center" },
-      "content": "Amber bullet 15px left, test name primary medium weight, time info muted 12px, arrow right muted."
-    },
-    "Sidebar": {
-      "animation": "Slides in from left",
-      "content": {
-        "top": "Nieuw gesprek primary button + icon, Search bar",
-        "list": "Grouped by Vandaag, Gisteren, Afgelopen 7 dagen, Afgelopen 30 dagen, Ouder",
-        "links": "Zelftesten with chevron, Mijn verloop with mini-spark (if data)",
-        "account": "Avatar + email + chevron",
-        "premium_banner": "Probeer Kompas Plus + 3-day-trial CTA (Free users only)"
-      }
-    },
-    "ZelftestenIndex": {
-      "route": "/zelftesten",
-      "top_bar": { "left": "Back arrow", "title": "Zelftesten" },
-      "filters": "Category chips horizontal scrollable",
-      "grid": "Grid/list of 24 test cards. Card layout: 36x36 tinted square with icon left, title + subtitle, question count + time muted right, PLUS badge for premium tests on right side."
-    },
-    "TestUitvoer": {
-      "route": "/zelftesten/:id",
-      "top_bar": { "left": "Back arrow", "center": "Test name 14.5px medium", "progress_bar": "2px height under header, fills accent color, 200ms animate each question" },
-      "body": {
-        "padding": 20,
-        "eyebrow": "VRAAG X VAN Y (11px, weight 500, muted, 0.5px letter-spacing)",
-        "gap1": 20,
-        "question": "17px weight 500, line-height 1.4, primary",
-        "context": "12px muted, 6px below question",
-        "gap2": 22,
-        "options": "4-5 cards vertical. surface_elevated, 0.5px border, radius 14px, padding 13-14px, 15px primary text, 9px gap. Selected state: accent_soft bg + accent border + accent text",
-        "auto_advance": "200ms after tap"
+      {
+        "slug": "avatar_2",
+        "url": "https://static.prod-images.emergentagent.com/jobs/112e74bf-4ac3-4dbd-abdf-fffa530fad01/images/9e6b6e79f53a9092c97ddb3500e0200afc295962527a47ef77b78e640ebcfbce.png",
+        "category": "avatar",
+        "description": "Alternative anonymous profile picture for DMs or secondary user."
       },
-      "footer": { "position": "fixed bottom", "height": 36, "content": "Indicatie — geen diagnose (10.5px muted centered)" }
-    },
-    "TestResultaat": {
-      "route": "/zelftesten/:id/result/:resultId",
-      "top_bar": { "left": "Back arrow", "center": "Test name", "right": "Share icon" },
-      "hero": {
-        "alignItems": "center",
-        "pill": "Category pill (e.g. Matig verhoogd, accent-soft, 11px)",
-        "score": "42px weight 300 letter-spacing -1.5px (e.g. 12/27)",
-        "context": "17px Georgia italic muted, 4px under score"
-      },
-      "narrative": { "padding": 20, "text": "12.5px leading 1.6 primary, 200-300 words AI narrative", "disclaimer": "10.5px muted 'Indicatie, geen diagnose.'" },
-      "actions": {
-        "bottom_stack": "Secondary PDF + PLUS badge, Secondary Verloop (if >1 afname), Primary Opslaan en sluiten",
-        "crisis_flag": "Top action becomes red Bel 1813 (BE) which opens tel-dial"
+      {
+        "slug": "premium_upsell_graphic",
+        "url": "https://static.prod-images.emergentagent.com/jobs/112e74bf-4ac3-4dbd-abdf-fffa530fad01/images/e58631c5fd1d43577f88ac1491dbda8a07a4f8f8041b651486c09d643f252f2e.png",
+        "category": "premium",
+        "description": "Hero graphic for the Premium subscription modal/screen."
       }
-    },
-    "CrisisSheet": {
-      "animation": "Bottom-sheet slides up automatically",
-      "content": {
-        "banner": "Red subtle banner top 'Hulp nu'",
-        "text": "Je hebt iets gedeeld waar het moeilijk over praten over is. Mensen die getraind zijn om te luisteren zijn nu bereikbaar:",
-        "actions": "Primary 'Bel 1813' (full-width), Secondary 'Chat met Tele-Onthaal', Secondary 'Stuur crisis-bericht aan vertrouwde persoon', Ghost 'Sluiten'"
-      }
-    },
-    "Settings": {
-      "route": "/instellingen",
-      "sections": [ "Account (email, sign out, delete)", "Abonnement (Free tier shown, upgrade CTA)", "Uiterlijk (Night/Klaar/Systeem radio)", "Privacy (data export, delete chats, delete account)", "Taal (NL default)", "Over (version, terms, privacy, feedback link)" ],
-      "footer": "Fixed bottom disclaimer: Kompas is geen vervanging voor professionele zorg. Bij crisis bel 1813 (BE) of 113 (NL)."
-    }
+    ]
+  },
+  "tech_instructions_for_main_agent": {
+    "styling": "Use Tailwind CSS and standard Shadcn components. Do not build React Native/Expo code—build a responsive mobile-first React web app.",
+    "fonts": "Import 'Outfit' and 'Manrope' from Google Fonts and configure them in tailwind.config.js.",
+    "icons": "Use 'lucide-react' for all icons (Home, Plus, MessageCircle, User, Lock, Sparkles).",
+    "interactions": "Ensure every clickable element has a distinct hover/active state (e.g., text color change, background tint) and proper 'data-testid' attributes.",
+    "tailwind_config": "Extend colors with the provided palette (e.g., brand-accent, background, surface). Extend fonts."
   }
 }
