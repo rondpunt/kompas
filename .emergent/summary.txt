@@ -1,0 +1,162 @@
+<analysis>**original_problem_statement**: 
+Bouw een health chat app genaamd Kompas (genre Noah AI) in Belgisch Nederlands met een premium feel. De app gebruikt Claude Sonnet via Emergent Universal Key.
+Product Requirements:
+- Full-stack architectuur (Expo frontend, FastAPI backend, MongoDB).
+- Geen crisis (1813) interventies of lokale opslag van chat details (strikte privacy).
+- 24 zelftesten met AI-narratief.
+- Emergent-managed Google Auth login om anonieme gesprekken te synchroniseren/claimen.
+- SecureHandshake animatie bij opstarten (inclusief cold-start en first-install variant).
+- Profiel-systeem (8 secties) dat context voedt aan de AI.
+- Uitgebreide PostHog analytics en een Stripe paywall (Plus-tier).
+- RAG memory across sessions en anonieme Community functionaliteit (in aanbouw).
+
+**User's preferred language**: Dutch (Belgian Dutch)
+(INSTRUCTIE VOOR DE VOLGENDE AGENT: Reageer ALTIJD in het Nederlands / Belgisch Nederlands)
+
+**what currently exists?** 
+Een stabiele full-stack Expo mobiele app met FastAPI backend. Het bevat een herwerkte chat interface met specifieke Sonnet-instructies (kortere reacties, geen vaste therapie-formules, typo-tolerant). Er is een soft-paywall logica ingebouwd. De app heeft een 8-delig profiel-systeem () gekoppeld aan de frontend (universele sectie-editor) dat direct context voedt aan de  calls. De SecureHandshake animatie is volledig herbouwd naar een premium groene 3-stappen animatie gebaseerd op de specs van de gebruiker. Inloggen met Google (in-app browser) is geïmplementeerd en getest.
+
+**Last working item**:
+- **Last item agent was working**: Reageren op de vraag van de gebruiker of de agent directe toegang heeft tot Figma om het design verder op te waarderen. De agent legde uit dat Figma bestanden geëxporteerd moeten worden (PNGs + design tokens) en stelde de vraag of we wachten op deze design-assets of doorgaan met de volgende geplande features (Stripe of AI confirm-prompts).
+- **Status**: USER VERIFICATION PENDING
+- **Agent Testing Done**: Y (Backend iter5 is getest en frontend UI gecheckt via screenshots).
+- **Which testing method agent to use?**: NA (Wachten op antwoord van gebruiker).
+- **User Testing Done**: N
+
+**All Pending/In progress Issue list**:
+- Issue 1 (P1): Nora branding in Google OAuth inlogscherm
+  - **Attempted fixes**: Agent heeft de gebruiker uitgelegd dat dit een Emergent project-instelling (of Google Cloud Console OAuth consent screen instelling) is en niet via de codebase veranderd kan worden.
+  - **Next debug checklist**: Gebruiker moet dit zelf aanpassen.
+  - **Why fix this issue and what will be achieved with the fix?** Zorgt voor consistente Kompas branding tijdens de login.
+  - **Status**: USER VERIFICATION PENDING
+  - **Is recurring issue?** N
+  - **Should Test frontend/backend/both after fix?** frontend
+  - **Blocked on other issue**: Requires user action in Emergent Dashboard.
+
+- Issue 2 (P2): Verzonken knoppen dual-light/dark border design.
+  - **Attempted fixes**: Agent heeft shadow en border properties toegepast (recessed design), maar het is nog niet 100% pixel-perfect zoals de gebruiker in gedachten heeft.
+  - **Next debug checklist**: Wacht op Figma exports van de gebruiker om de styling exact over te nemen.
+  - **Why fix this issue and what will be achieved with the fix?** Premium gegoten feel van de UI.
+  - **Status**: BLOCKED (Waiting for Figma PNGs/Tokens)
+  - **Is recurring issue?** N
+  - **Should Test frontend/backend/both after fix?** frontend
+
+**In progress Task List**:
+- Task 1: Figma Design Opwaardering
+  - **Where to resume**: Zodra de gebruiker de PNGs en kleuren/fonts uploadt, pas  en component stijlen 1-op-1 aan.
+  - **What will be achieved with this?** Een professionele, pixel-perfect UI.
+  - **Status**: BLOCKED
+  - **Should Test frontend/backend/both after fix?** frontend
+  - **Blocked on something**: Figma bestanden/assets van gebruiker.
+
+- Task 2: AI Personalisatie & Smart Openers (Batch 4)
+  - **Where to resume**: Implementeer background extraction tijdens chat (Zal ik dit toevoegen aan je profiel?) en slimme openings-prompts op het homescherm gebaseerd op het profiel.
+  - **What will be achieved with this?** Maakt de app slimmer en de AI proactiever in het onthouden van user context.
+  - **Status**: NOT STARTED (Gepauzeerd wegens Figma conversatie)
+  - **Should Test frontend/backend/both after fix?** both
+  - **Blocked on something**: User direction (welke taak nu prio krijgt).
+
+**Upcoming and Future Tasks**
+Upcoming Tasks:
+- P0: Stripe paywall integratie (Plus-tier, vereist live/test keys van de gebruiker).
+- P1: Post-Google-login 90-sec onboarding / setup flow (Welkom → Basis → Hoe wil je dat ik praat → Klaar).
+- P1: RAG memory across sessions (Backend vector embeddings + memory UI toggle op frontend).
+- P1: Community functionaliteit (anonieme profielen per aandoening (ADHD, autisme, etc.), read-only voor free users).
+
+Future Tasks:
+- P2: PostHog Analytics integratie (volledig event-pakket via ).
+- P2: Insights-tab met wekelijkse synthese van de gesprekken.
+- P2: Patroon-detectie engine in de backend.
+- P3: PDF-export functionaliteit voor testresultaten (momenteel fake/mocked).
+
+**Completed work in this session**
+- Herstart backend & frontend na Google Auth en getest of profielen goed koppelen (iteratie 3 backend validatie geslaagd) (DONE)
+- Batch 1: Premium UI polish (onboarding herwerkt met specifieke kleurtinten, soft-paywall hints na 20 berichten/3 dagen) (DONE)
+- Zelftesten UI fixes (tabs afknippen opgelost, recessed cards toegevoegd) (DONE)
+- Chat behavior overhaul via system-prompt () met anti-opener regex en 280-char limiet (DONE)
+- Quick fixes: pen icon in chat input (clears chat), web outline (wit vierkant) verwijderd, verzonken knoppen stijl toegepast (DONE)
+- Batch B+C:  backend schema & CRUD endpoints toegevoegd. Frontend universele sectie-editor gebouwd voor alle 8 profielsecties. Profiel-context wordt succesvol geïnjecteerd in de  prompt (DONE)
+- Batch 3:  animatie 100% nagebouwd volgens  met first-install (uitgebreid) en cold-start (kort) logica (DONE)
+
+**Earlier issues found/mentioned but not fixed**
+None. Alle feedback op screenshots (afgekapte tabs, witte outline, niet-werkende pen-icon) is in deze sessie opgelost.
+
+**Known issue recurrence from previous fork**
+- Issue recurrence in previous fork: N/A
+- Recurrence count: 0
+- Status: NOT STARTED
+
+**Code Architecture**
+- : Expo Router file-based structuur ( voor chat, , ).
+- : Componenten (), API client (), theme/styling.
+- : FastAPI backend (), met afgesplitste modules () en integratie calls.
+
+**Key Technical Concepts**
+React Native, Expo Router, FastAPI, MongoDB, Emergent Universal Key (Claude Sonnet), Emergent-managed Google Auth. Profile-driven AI Context Injection.
+
+**key DB schema**
+- : {id, google_id, email, plan}
+- : {id, session_id, messages, created_at}
+- : {schema_version, owner_device_id, owner_user_id, basis, levenscontext, communicatie, triggers, mentale_gezondheid, waarden, steun, levensbeschouwelijk}
+
+**changes in tech stack**
+- Introductie van  in de backend om de sterk groeiende  te ontlasten en profiel context beter te structureren.
+
+**All files of reference**
+- : Bevat API routes; chat route modificeert prompts obv user profiel.
+- : Nieuwe module met CRUD functies en context-builders voor profielen.
+- : Frontend client logic voor profielen.
+- : Dynamische editor voor de 8 profielsecties.
+- : Main chat interface met de soft-paywall logica.
+- : Bevat de exact uitgewerkte 3-stappen groene veiligheidsanimatie.
+
+**Areas that need refactoring**
+-  is nog steeds > 1000 regels.  is afgesplitst, maar op termijn kan het lonen om chat/auth/conversations in  onder te verdelen.
+
+**key api endpoints**
+-  (injecteert nu profiel data uit db)
+-  (Nieuw)
+- 
+
+**Critical Info for New Agent**
+- **Taal:** Antwoord ALTIJD in het Nederlands.
+- **Privacy:** Gebruiker is fel gekant tegen automatische crisis interventies of het doorsturen naar de 1813 hulplijn. Niet terugbrengen.
+- **Design focus:** Gebruiker wil een uiterst premium (gegoten, niet paint) design. In de laatste boodschap werd naar Figma integratie gevraagd. Wacht op duidelijke instructies of assets (PNGs) voordat je grote styling beslissingen neemt uit jezelf.
+- Als je wijzigingen maakt aan de UI, gebruik de **screenshot tool** om de visuele resultaten (zoals op web localhost:3000) te bevestigen.
+- Voor de Stripe integratie, herinner de gebruiker eraan om test keys () te voorzien indien zij hiernaar vragen.
+
+**documents and test reports created in this job**
+-  (Update na backend testing)
+- Iteration 5 test logs via testing agent voor de .
+
+**Last 10 User Messages and any pending HUMAN messages**
+- [Msg 224] User: Heb je toegang tot figma om het design te opwaarderen? -> (PENDING HUMAN DECISION OP ANTWOORD)
+- [Msg 205] User: Uploaded animatie specs docx, instructie om blind uit te voeren. (Gefikst)
+- [Msg 132] User: Vraagt om B+C (profiel modules) te bouwen en quick fixes te doen (pen icoon, wit vierkantje, encryptie tijd 1.5s). (Gefikst)
+- [Msg 128] User: Uploaded sprint brief. (Geanalyseerd en grotendeels uitgevoerd)
+- [Msg 115] User: Uploaded  voor chat prompt overhaul. (Gefikst)
+- [Msg 94] User: Uploaded screenshot, gaf feedback over layout, afgekapte tabs, Nora Google inlog naam, en trage animatie. (Gefikst)
+- [Msg 51] User: eerst functionele zichtbare zaken voor de app... prioritize en go. (Voltooid met Batch 1)
+- [Msg 47] User: Gaf PostHog specs en een lijst van prioriteiten (onboarding hooks, stripe, rag, community). (Gestart)
+
+**Project Health Check:**
+- Gezond. Alle 11 backend iteratie tests voor profiel & chat context zijn geslaagd. Expo web preview rendert perfect. Geen bekende runtime regressies.
+
+**3rd Party Integrations**
+- Emergent Universal Key (Claude Sonnet 4.5) — uses Emergent LLM Key
+- Emergent-managed Google Auth (Authentication) — uses Emergent Integration Playbook
+- Stripe (Payments) — (Gepland, requires User API Key)
+- PostHog (Analytics) — (Gepland, requires User API Key/Host)
+
+**Testing status**
+- Testing agent used after significant changes: YES (backend testing agent iter 5 voor Profile functionaliteit).
+- Troubleshoot agent used after agent stuck in loop: NO
+- Test files created: None manually, backend testing framework used.
+- Known regressions: None
+
+**Credentials to test flow:**
+Check  (Bevat ADMIN_TOKEN en mogelijks auth test-accounts indien lokaal overschreven).
+
+**What agent forgot to execute**
+Geen features vergeten, maar het is belangrijk om te onthouden dat Nora veranderen naar Kompas op de Google inlogpagina een actie is die de **gebruiker zelf** in hun Emergent Dashboard of Google Cloud Console moet doen; blijf dit communiceren mocht de gebruiker dit weer aanbrengen.
+Daarnaast wachten we momenteel op een keuze van de gebruiker met betrekking tot Figma/UI design vs. verder programmeren van backend AI-features.</analysis>

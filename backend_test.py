@@ -22,7 +22,7 @@ DB_NAME = os.environ["DB_NAME"]
 ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "kompas-admin-dev-2026")
 
 # External ingress base URL
-BASE = "https://noah-android-chat.preview.emergentagent.com/api"
+BASE = "https://kompas-health-chat.preview.emergentagent.com/api"
 
 # Test session token + user we will seed into Mongo
 SEED_USER_ID = f"user_test_{uuid.uuid4().hex[:8]}"

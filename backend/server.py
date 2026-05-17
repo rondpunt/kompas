@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request, Body
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 import uuid
 from datetime import datetime, timezone, timedelta
+import stripe
 
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 
@@ -33,6 +34,13 @@ db = client[os.environ['DB_NAME']]
 EMERGENT_LLM_KEY = os.environ['EMERGENT_LLM_KEY']
 MODEL_PROVIDER = "anthropic"
 MODEL_NAME = "claude-sonnet-4-5-20250929"
+
+# Stripe — uses Emergent-managed key
+_stripe_key = os.environ.get('STRIPE_API_KEY', '')
+stripe.api_key = _stripe_key
+STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET', '')
+STRIPE_PRICE_MONTHLY = os.environ.get('STRIPE_PRICE_MONTHLY', '')
+STRIPE_PRICE_ANNUAL = os.environ.get('STRIPE_PRICE_ANNUAL', '')
 
 # Configure logging
 logging.basicConfig(
@@ -1208,6 +1216,166 @@ async def admin_list_qa_test_suggestions(
     """Hidden QA test-input suggestions emitted by the chat AI for developer review."""
     docs = await db.qa_test_suggestions.find({}, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
     return {"count": len(docs), "suggestions": docs}
+
+
+# ─────────────────────────────────────────────────────
+# STRIPE — Subscription Checkout (14-day trial)
+# ─────────────────────────────────────────────────────
+
+class CheckoutRequest(BaseModel):
+    plan: str = "annual"   # "monthly" or "annual"
+    user_id: str = "anonymous"
+
+
+@api_router.post("/stripe/checkout-session")
+async def create_stripe_checkout(body: CheckoutRequest):
+    """Create a Stripe Checkout Session for the Plus subscription (14-day trial)."""
+    # Validate plan
+    if body.plan not in ("monthly", "annual"):
+        raise HTTPException(status_code=400, detail="Invalid plan")
+
+    # If Stripe key is not a real key → return graceful mock
+    if not stripe.api_key or not stripe.api_key.startswith("sk_"):
+        logger.warning("Stripe key not configured; returning mock checkout")
+        return {
+            "checkoutUrl": None,
+            "mock": True,
+            "message": "Stripe is niet geconfigureerd. Trial wordt lokaal gestart.",
+        }
+
+    price_id = STRIPE_PRICE_MONTHLY if body.plan == "monthly" else STRIPE_PRICE_ANNUAL
+    if not price_id:
+        return {
+            "checkoutUrl": None,
+            "mock": True,
+            "message": "Stripe Price ID ontbreekt. Trial wordt lokaal gestart.",
+        }
+
+    frontend_url = os.environ.get("EXPO_PUBLIC_BACKEND_URL", "https://kompas-health-chat.preview.emergentagent.com")
+    try:
+        session = stripe.checkout.Session.create(
+            mode="subscription",
+            line_items=[{"price": price_id, "quantity": 1}],
+            subscription_data={"trial_period_days": 14},
+            payment_method_types=["card", "bancontact"],
+            success_url=f"{frontend_url}/onboarding/confirmation?session_id={{CHECKOUT_SESSION_ID}}",
+            cancel_url=f"{frontend_url}/onboarding",
+            client_reference_id=body.user_id,
+        )
+        return {"checkoutUrl": session.url}
+    except Exception as e:
+        logger.error(f"Stripe checkout error: {e}")
+        return {"checkoutUrl": None, "mock": True, "message": str(e)}
+
+
+@api_router.post("/stripe/webhook")
+async def stripe_webhook(request: Request):
+    """Handle Stripe webhook events to sync subscription state to MongoDB."""
+    payload = await request.body()
+    sig_header = request.headers.get("stripe-signature", "")
+
+    if STRIPE_WEBHOOK_SECRET:
+        try:
+            event = stripe.Webhook.construct_event(payload, sig_header, STRIPE_WEBHOOK_SECRET)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=str(e))
+    else:
+        import json
+        event = json.loads(payload)
+
+    event_type = event.get("type", "")
+    data_obj = event.get("data", {}).get("object", {})
+    now = datetime.utcnow().isoformat()
+
+    if event_type == "checkout.session.completed":
+        sub_id = data_obj.get("subscription")
+        if sub_id:
+            await db.subscriptions.update_one(
+                {"stripe_subscription_id": sub_id},
+                {"$set": {
+                    "user_id": data_obj.get("client_reference_id"),
+                    "stripe_customer_id": data_obj.get("customer"),
+                    "stripe_subscription_id": sub_id,
+                    "status": "trialing",
+                    "updated_at": now,
+                }, "$setOnInsert": {"created_at": now}},
+                upsert=True,
+            )
+    elif event_type in ("customer.subscription.created", "customer.subscription.updated"):
+        items = data_obj.get("items", {}).get("data", [])
+        price_id = items[0]["price"]["id"] if items else None
+        await db.subscriptions.update_one(
+            {"stripe_subscription_id": data_obj.get("id")},
+            {"$set": {
+                "stripe_customer_id": data_obj.get("customer"),
+                "stripe_subscription_id": data_obj.get("id"),
+                "status": data_obj.get("status"),
+                "price_id": price_id,
+                "current_period_end": data_obj.get("current_period_end"),
+                "trial_end": data_obj.get("trial_end"),
+                "updated_at": now,
+            }, "$setOnInsert": {"created_at": now}},
+            upsert=True,
+        )
+    elif event_type == "customer.subscription.deleted":
+        await db.subscriptions.update_one(
+            {"stripe_subscription_id": data_obj.get("id")},
+            {"$set": {"status": "canceled", "updated_at": now}},
+        )
+
+    return {"received": True}
+
+
+@api_router.get("/subscription")
+async def get_subscription(request: Request):
+    """Return the current user's subscription status."""
+    user = await get_current_user(request)
+    device_id = request.headers.get("X-Device-Id")
+    q = _owner_query(user, device_id)
+    sub = await db.subscriptions.find_one(q, sort=[("updated_at", -1)])
+    if not sub:
+        return {"status": "none"}
+    return {
+        "status": sub.get("status", "none"),
+        "trial_end": sub.get("trial_end"),
+        "current_period_end": sub.get("current_period_end"),
+    }
+
+
+# ─────────────────────────────────────────────────────
+# ONBOARDING — Quiz data storage
+# ─────────────────────────────────────────────────────
+
+class OnboardingQuizRequest(BaseModel):
+    intentions: List[str] = []
+    mood: Optional[str] = None
+    therapy_experience: Optional[str] = None
+
+
+@api_router.post("/onboarding/quiz")
+async def save_onboarding_quiz(body: OnboardingQuizRequest, request: Request):
+    """Persist quiz answers from the onboarding flow to the user's profile."""
+    user = await get_current_user(request)
+    device_id = request.headers.get("X-Device-Id")
+    q = _owner_query(user, device_id)
+    now = datetime.utcnow().isoformat()
+    await db.profiles.update_one(
+        q,
+        {"$set": {
+            "onboarding_quiz": {
+                "intentions": body.intentions,
+                "mood": body.mood,
+                "therapy_experience": body.therapy_experience,
+                "completed_at": now,
+            },
+            "updated_at": now,
+        }, "$setOnInsert": {
+            "created_at": now,
+            **_owner_fields(user, device_id),
+        }},
+        upsert=True,
+    )
+    return {"ok": True}
 
 
 @api_router.get("/")

@@ -104,8 +104,10 @@
 
 user_problem_statement: |
   Kompas (Belgian Dutch mental-health chat app, Claude Sonnet 4.5, 24 self-tests, anonymous-by-default with optional Emergent-managed Google auth).
-  Iteration 3 added: Emergent Google Auth + device_id scoping for anonymous users + /api/auth/claim to migrate anonymous data to a profile.
-  Need backend validation that the new auth endpoints work AND existing chat/conversation/assessment endpoints continue to scope correctly by device_id (anonymous) vs user_id (authenticated).
+  NEW: Complete 9-screen onboarding flow per spec document (Deel B):
+  Welcome → Quiz x3 (Intent/Mood/Therapy) → First Conversation → Privacy Choice → Paywall (Stripe 14-day trial) → Confirmation.
+  Emergent systems: Google Auth replaces Magic Link, PostHog already active (phc_zX9...), Stripe key sk_test_emergent in env.
+  PostHog frontend events tracking all onboarding funnel steps.
 
 backend:
   - task: "Profile — GET/PATCH/forget/export/delete CRUD"
@@ -347,7 +349,7 @@ agent_communication:
       - DO NOT test frontend. Backend only.
   - agent: "testing"
     message: |
-      Iteration 3 backend validation: 22/22 backend test cases PASSED on the external ingress (https://noah-android-chat.preview.emergentagent.com/api).
+      Iteration 3 backend validation: 22/22 backend test cases PASSED on the external ingress (https://kompas-health-chat.preview.emergentagent.com/api).
 
       Coverage:
         1. POST /api/auth/session — 422 on missing field, 401 on invalid session_id (provider correctly rejected). Happy path not testable without real Emergent OAuth, as expected.
@@ -363,7 +365,7 @@ agent_communication:
       No code changes were made. Test file: /app/backend_test.py. All current_focus items can be marked complete.
   - agent: "testing"
     message: |
-      Iteration 5 backend validation: 12/12 PASSED on external ingress (https://noah-android-chat.preview.emergentagent.com/api).
+      Iteration 5 backend validation: 12/12 PASSED on external ingress (https://kompas-health-chat.preview.emergentagent.com/api).
       Test file: /app/backend_test_iter5.py. Covered:
         1) GET /api/profile auto-creates empty profile_v1 with all 8 sections, all completions at 0.0, overall=0.0.
         2) PATCH basis (Sam/1990) persists; basis_completion=0.75, overall=0.09.
@@ -377,3 +379,43 @@ agent_communication:
         10) /api/chat with X-Device-Id (profile populated) → 200; conversation_id/user_message/assistant_message all present; Claude responded successfully — no upstream budget block during this run.
         11) Admin /api/admin/overview: 401 without token, 200 with kompas-admin-dev-2026.
       No code changes were made. Both iter5 current_focus tasks marked working=true.
+
+  - agent: "main"
+    message: |
+      Iteration 6 — New onboarding flow gebouwd en visueel getest.
+      Alle 8 schermen werken via screenshot-verificatie:
+      1. Welcome screen (compass icon, serif headline, feature bullets, blue CTA)
+      2. Quiz scherm 1/3 (intent, multi-select met checkboxes)
+      3. Quiz scherm 2/3 (mood, single-select auto-advance)
+      4. Quiz scherm 3/3 (therapy experience)
+      5. First Conversation (persoonlijke AI-opener, suggestion chips, live chat)
+      6. Privacy Choice (anoniem vs Google Account cards)
+      7. Paywall (features, timeline, pricing toggle, social proof)
+      8. Confirmation (groene check, 3 next-step cards, "Begin met Kompas")
+      
+      Backend: 
+      - POST /api/stripe/checkout-session (graceful fallback als Stripe niet geconfigureerd)
+      - POST /api/stripe/webhook (subscription sync naar MongoDB)
+      - GET /api/subscription (status per user/device)
+      - POST /api/onboarding/quiz (quiz-data opgeslagen bij finish)
+      
+      Frontend:
+      - /app/onboarding.tsx volledig herschreven als 8-stap orchestrator
+      - src/stores/onboardingStore.ts (Zustand v5 store)
+      - src/utils/posthog.ts (PostHog singleton, EU host)
+      - src/components/onboarding/* (6 component files)
+      - PostHog key toegevoegd aan frontend .env
+      
+      Please test the complete onboarding flow end-to-end:
+      - All 8 screens render correctly
+      - Quiz multi-select works (step 1 checkboxes)
+      - Quiz single-select auto-advances (steps 2-3)
+      - Skip buttons work on all quiz screens
+      - First Conversation renders with personalized opener
+      - Privacy Choice shows both cards correctly
+      - Paywall shows timeline, pricing toggle, social proof
+      - "Start gratis trial" calls backend and proceeds to confirmation
+      - "Liever anoniem verder" skips to main chat
+      - Confirmation "Begin met Kompas" navigates to main chat (index.tsx)
+      - Backend endpoints: POST /api/stripe/checkout-session, POST /api/onboarding/quiz
+

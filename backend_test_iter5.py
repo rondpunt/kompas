@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 load_dotenv("/app/backend/.env")
 ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "kompas-admin-dev-2026")
 
-BASE = "https://noah-android-chat.preview.emergentagent.com/api"
+BASE = "https://kompas-health-chat.preview.emergentagent.com/api"
 DEVICE = "dev_test_iter5"
 DEVICE_OTHER = "dev_test_iter5_OTHER"
 
