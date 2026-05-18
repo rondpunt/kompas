@@ -56,7 +56,7 @@ const FIELDS_BY_SECTION: Record<ProfileSectionKey, Field[]> = {
   communicatie: [
     {
       kind: "section-note",
-      text: "Dit gebruikt Kompas om met je af te stemmen. Verschijnt nooit ergens anders.",
+      text: "Dit gebruikt Junie om met je af te stemmen. Verschijnt nooit ergens anders.",
     },
     {
       kind: "slider",

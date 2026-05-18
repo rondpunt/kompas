@@ -1,11 +1,12 @@
 import React from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, ScrollView,
+  View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { OB } from './ob-theme';
+import { OB, OBFonts } from './ob-theme';
 import { useAuth } from '@/src/auth/AuthContext';
+import { APP_NAME } from '@/src/config/branding';
 
 interface Props {
   onAnonymous: () => void;
@@ -20,34 +21,30 @@ export function PrivacyStep({ onAnonymous, onAccount }: Props) {
     setLoading(true);
     try {
       await signIn();
-      // signIn updates AuthContext state; check if authenticated
     } finally {
       setLoading(false);
     }
-    // Navigate regardless (signIn may have succeeded or user closed browser)
     onAccount();
   };
 
   return (
     <SafeAreaView style={s.root}>
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={s.headline}>Hoe wil je{`\n`}verdergaan?</Text>
-        <Text style={s.sub}>Kompas werkt op beide manieren. Jouw keuze.</Text>
+        <Text style={s.headline}>Hoe wil je verder?</Text>
+        <Text style={s.sub}>{APP_NAME} werkt op beide manieren. Kies wat past.</Text>
 
-        {/* Anonymous card */}
-        <TouchableOpacity style={s.card} onPress={onAnonymous} activeOpacity={0.85}>
-          <View style={s.cardHeader}>
+        <TouchableOpacity style={s.card} onPress={onAnonymous} activeOpacity={0.8}>
+          <View style={s.head}>
             <View style={s.iconBadge}>
-              <Feather name="eye-off" size={20} color={OB.textSecondary} />
+              <Feather name="eye-off" size={18} color={OB.textPrimary} />
             </View>
             <Text style={s.cardTitle}>Anoniem blijven</Text>
           </View>
           <View style={s.bullets}>
             {[
-              'Gesprekken blijven op dit apparaat',
-              'Geen email of account nodig',
+              'Gesprekken op dit toestel',
+              'Geen email of account',
               'Maximale privacy',
-              'Kan later nog account aanmaken',
             ].map((b) => (
               <View key={b} style={s.bullet}>
                 <View style={s.bulletDot} />
@@ -61,20 +58,18 @@ export function PrivacyStep({ onAnonymous, onAccount }: Props) {
           </View>
         </TouchableOpacity>
 
-        {/* Account card */}
-        <TouchableOpacity style={[s.card, s.cardAccent]} onPress={handleAccount} activeOpacity={0.85} disabled={loading}>
-          <View style={s.cardHeader}>
+        <TouchableOpacity style={[s.card, s.cardAccent]} onPress={handleAccount} activeOpacity={0.8} disabled={loading}>
+          <View style={s.head}>
             <View style={[s.iconBadge, s.iconBadgeAccent]}>
-              <Feather name="lock" size={20} color={OB.accent} />
+              <Feather name="user" size={18} color={OB.accent} />
             </View>
-            <Text style={[s.cardTitle, s.cardTitleAccent]}>Account aanmaken</Text>
+            <Text style={[s.cardTitle, { color: OB.accent }]}>Account aanmaken</Text>
           </View>
           <View style={s.bullets}>
             {[
-              'Gesprekken beschikbaar op alle apparaten',
-              'Cross-session geheugen (Plus feature)',
-              'PDF export naar je therapeut',
-              'Altijd anoniem te maken',
+              'Sync over al je toestellen',
+              'Geheugen tussen gesprekken (Plus)',
+              'PDF-export voor therapeut',
             ].map((b) => (
               <View key={b} style={s.bullet}>
                 <View style={[s.bulletDot, { backgroundColor: OB.accent }]} />
@@ -84,14 +79,14 @@ export function PrivacyStep({ onAnonymous, onAccount }: Props) {
           </View>
           <View style={s.cardCta}>
             <Text style={[s.cardCtaText, { color: OB.accent }]}>
-              {loading ? 'Bezig...' : 'Aanmelden met Google'}
+              {loading ? 'Bezig…' : 'Aanmelden met Google'}
             </Text>
             <Feather name="arrow-right" size={14} color={OB.accent} />
           </View>
         </TouchableOpacity>
 
         <Text style={s.footer}>
-          Je gegevens worden opgeslagen op EU-servers. Nooit doorverkocht of gedeeld.
+          EU-servers. Nooit doorverkocht of gedeeld.
         </Text>
       </ScrollView>
     </SafeAreaView>
@@ -100,30 +95,31 @@ export function PrivacyStep({ onAnonymous, onAccount }: Props) {
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: OB.bg },
-  scroll: { paddingHorizontal: 24, paddingTop: 40, paddingBottom: 40 },
+  scroll: { paddingHorizontal: 20, paddingTop: 24, paddingBottom: 30 },
   headline: {
-    fontSize: 32, fontWeight: '500', lineHeight: 40,
-    color: OB.textPrimary, marginBottom: 12,
+    fontSize: 26, fontWeight: '500', lineHeight: 32,
+    color: OB.textPrimary, marginBottom: 8,
+    fontFamily: Platform.select({ ios: OBFonts.serif, android: 'serif' }),
+    fontStyle: 'italic', letterSpacing: -0.3,
   },
-  sub: { fontSize: 15, color: OB.textMuted, marginBottom: 32 },
+  sub: { fontSize: 14, color: OB.textMuted, marginBottom: 22 },
   card: {
-    backgroundColor: OB.surface, borderWidth: 1,
-    borderColor: OB.border, borderRadius: 20, padding: 22, marginBottom: 16,
+    backgroundColor: OB.surface, borderWidth: 0.5,
+    borderColor: OB.border, borderRadius: 16, padding: 16, marginBottom: 12,
   },
-  cardAccent: { borderColor: OB.accent + '66' },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 18 },
+  cardAccent: { borderColor: OB.accent + '55' },
+  head: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
   iconBadge: {
-    width: 40, height: 40, borderRadius: 12,
+    width: 36, height: 36, borderRadius: 10,
     backgroundColor: OB.elevated, alignItems: 'center', justifyContent: 'center',
   },
   iconBadgeAccent: { backgroundColor: OB.accentSoft },
-  cardTitle: { fontSize: 18, fontWeight: '600', color: OB.textPrimary },
-  cardTitleAccent: { color: OB.accent },
-  bullets: { gap: 10, marginBottom: 20 },
-  bullet: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  bulletDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: OB.textMuted },
-  bulletText: { fontSize: 14, color: OB.textSecondary, flex: 1 },
+  cardTitle: { fontSize: 16, fontWeight: '600', color: OB.textPrimary },
+  bullets: { gap: 8, marginBottom: 14 },
+  bullet: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  bulletDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: OB.textMuted },
+  bulletText: { fontSize: 13.5, color: OB.textSecondary, flex: 1 },
   cardCta: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  cardCtaText: { fontSize: 14, fontWeight: '600', color: OB.textSecondary },
-  footer: { textAlign: 'center', fontSize: 12, color: OB.textFaint, marginTop: 8, lineHeight: 18 },
+  cardCtaText: { fontSize: 13.5, fontWeight: '600', color: OB.textSecondary },
+  footer: { textAlign: 'center', fontSize: 11.5, color: OB.textFaint, marginTop: 8, lineHeight: 17 },
 });

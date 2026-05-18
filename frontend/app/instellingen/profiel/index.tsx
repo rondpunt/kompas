@@ -142,7 +142,7 @@ export default function ProfielIndex() {
                 },
               ]}
             >
-              Hoe meer Kompas jou kent,{"\n"}hoe scherper de gesprekken.
+              Hoe meer Junie jou kent,{"\n"}hoe scherper de gesprekken.
             </Text>
             <Text style={[styles.heroBody, { color: palette.textSecondary }]}>
               Verschijnt nooit ergens anders. Wordt enkel gebruikt om met jou af te stemmen — geen letterlijke verwijzing.
@@ -228,7 +228,7 @@ export default function ProfielIndex() {
               <Feather name="cpu" size={15} color={palette.textPrimary} />
               <View style={{ flex: 1 }}>
                 <Text style={[styles.privacyRowText, { color: palette.textPrimary }]}>Geheugen tussen gesprekken</Text>
-                <Text style={[styles.memoryHint, { color: palette.textMuted }]}>Als dit uit staat, gebruikt Kompas geen profielcontext.</Text>
+                <Text style={[styles.memoryHint, { color: palette.textMuted }]}>Als dit uit staat, gebruikt Junie geen profielcontext.</Text>
               </View>
               <Switch
                 testID="profile-memory-toggle"

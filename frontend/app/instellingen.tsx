@@ -5,6 +5,8 @@ import { Feather } from "@expo/vector-icons";
 import { useRouter, Stack } from "expo-router";
 import { useTheme } from "@/src/theme/ThemeContext";
 import { useAuth } from "@/src/auth/AuthContext";
+import { PlusModal } from "@/src/components/PlusModal";
+import { APP_NAME, APP_PLUS_NAME } from "@/src/config/branding";
 
 const THEME_OPTIONS = [
   { id: "night", label: "Night" },
@@ -17,6 +19,7 @@ export default function Settings() {
   const { state, user, signIn, signOut } = useAuth();
   const router = useRouter();
   const [loadingAuth, setLoadingAuth] = React.useState(false);
+  const [showPlus, setShowPlus] = React.useState(false);
 
   const handleSignIn = async () => {
     setLoadingAuth(true);
@@ -59,7 +62,7 @@ export default function Settings() {
             <View style={{ flex: 1, marginLeft: 12 }}>
               <Text style={[styles.rowLabel, { color: palette.textPrimary }]}>Mijn profiel</Text>
               <Text style={[styles.rowValue, { color: palette.textMuted }]}>
-                Hoe meer Kompas weet, hoe scherper het gesprek
+                Hoe meer {APP_NAME} weet, hoe scherper het gesprek
               </Text>
             </View>
             <Feather name="chevron-right" size={16} color={palette.textMuted} />
@@ -140,14 +143,38 @@ export default function Settings() {
               <Text style={[styles.tierPillText, { color: palette.textPrimary }]}>Gratis</Text>
             </View>
           </View>
-          <TouchableOpacity testID="settings-upgrade" disabled style={[styles.upgradeBtn, { borderColor: palette.borderDefault, opacity: 0.7 }]}>
+          <TouchableOpacity
+            testID="settings-upgrade"
+            onPress={() => setShowPlus(true)}
+            activeOpacity={0.75}
+            style={[styles.upgradeBtn, { borderColor: palette.borderDefault }]}
+          >
             <Feather name="zap" size={14} color={palette.accent} />
             <Text style={[styles.upgradeBtnText, { color: palette.textPrimary }]}>
-              Probeer Kompas Plus — binnenkort
+              Probeer {APP_PLUS_NAME}
             </Text>
             <View style={[styles.plusBadge, { backgroundColor: palette.accent }]}>
               <Text style={styles.plusBadgeText}>PLUS</Text>
             </View>
+          </TouchableOpacity>
+        </Section>
+
+        {/* Community section */}
+        <Section title="Gemeenschap" palette={palette}>
+          <TouchableOpacity
+            testID="settings-community"
+            onPress={() => router.push("/community" as any)}
+            style={[styles.actionRow, { borderBottomColor: palette.borderSubtle }]}
+            activeOpacity={0.7}
+          >
+            <Feather name="users" size={16} color={palette.textPrimary} />
+            <View style={{ flex: 1, marginLeft: 12 }}>
+              <Text style={[styles.rowLabel, { color: palette.textPrimary }]}>Anonieme community</Text>
+              <Text style={[styles.rowValue, { color: palette.textMuted }]}>
+                Lees mee in thema-kanalen. Posten met Plus.
+              </Text>
+            </View>
+            <Feather name="chevron-right" size={16} color={palette.textMuted} />
           </TouchableOpacity>
         </Section>
 
@@ -202,9 +229,11 @@ export default function Settings() {
 
       <View style={[styles.disclaimerBar, { borderTopColor: palette.borderSubtle, backgroundColor: palette.background }]}>
         <Text style={[styles.disclaimerText, { color: palette.textMuted }]}>
-          Kompas is geen vervanging voor professionele zorg.
+          {APP_NAME} is geen vervanging voor professionele zorg.
         </Text>
       </View>
+
+      <PlusModal visible={showPlus} reason="generic" onClose={() => setShowPlus(false)} />
     </SafeAreaView>
   );
 }

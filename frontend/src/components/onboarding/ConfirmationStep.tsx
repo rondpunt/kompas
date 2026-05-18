@@ -1,10 +1,10 @@
 import React, { useEffect, useRef } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, Animated,
+  View, Text, TouchableOpacity, StyleSheet, Animated, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { OB } from './ob-theme';
+import { OB, OBFonts } from './ob-theme';
 import { APP_NAME } from '@/src/config/branding';
 
 interface Props {
@@ -16,19 +16,19 @@ interface Props {
 }
 
 const NEXT_STEPS = [
-  { icon: 'message-circle' as const, title: 'Verder met gesprek', desc: 'Ga verder waar je was.', cta: 'Open chat' },
-  { icon: 'file-text' as const, title: 'Verken de tests', desc: '24 gevalideerde screenings zoals PHQ-9 en GAD-7.', cta: 'Bekijk tests' },
-  { icon: 'settings' as const, title: 'Instellingen aanpassen', desc: 'Thema, privacy, notificaties.', cta: 'Naar instellingen' },
+  { icon: 'message-circle' as const, title: 'Begin een gesprek', desc: 'Praat over wat speelt.' },
+  { icon: 'check-square' as const, title: 'Verken de testen', desc: '24 gevalideerde screeners.' },
+  { icon: 'settings' as const, title: 'Stel jezelf in', desc: 'Thema, privacy, profiel.' },
 ];
 
 export function ConfirmationStep({ trialEndsAt, onChat, onTests, onSettings, onDone }: Props) {
-  const checkScale = useRef(new Animated.Value(0)).current;
-  const contentFade = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(0)).current;
+  const fade = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.sequence([
-      Animated.spring(checkScale, { toValue: 1, friction: 4, useNativeDriver: true }),
-      Animated.timing(contentFade, { toValue: 1, duration: 400, useNativeDriver: true }),
+      Animated.spring(scale, { toValue: 1, friction: 5, useNativeDriver: true }),
+      Animated.timing(fade, { toValue: 1, duration: 350, useNativeDriver: true }),
     ]).start();
   }, []);
 
@@ -41,38 +41,38 @@ export function ConfirmationStep({ trialEndsAt, onChat, onTests, onSettings, onD
   return (
     <SafeAreaView style={s.root}>
       <View style={s.content}>
-        {/* Check icon */}
-        <Animated.View style={[s.checkWrap, { transform: [{ scale: checkScale }] }]}>
-          <View style={s.checkCircle}>
-            <Feather name="check" size={28} color={OB.success} />
+        <Animated.View style={[s.checkWrap, { transform: [{ scale }] }]}>
+          <View style={s.haloOuter}>
+            <View style={s.haloInner}>
+              <Feather name="check" size={26} color={OB.accent} />
+            </View>
           </View>
         </Animated.View>
 
-        <Animated.View style={{ opacity: contentFade }}>
-          <Text style={s.headline}>Je bent klaar om{`\n`}te beginnen</Text>
+        <Animated.View style={{ opacity: fade, width: '100%' }}>
+          <Text style={s.headline}>Je bent klaar</Text>
 
           {endDate ? (
             <Text style={s.subtext}>
-              Je 14-daagse trial is gestart. We sturen je een herinnering voordat we je eerste betaling doen op {endDate}.
+              Je 14-daagse trial loopt. Eerste betaling op {endDate}.
             </Text>
           ) : (
             <Text style={s.subtext}>
-              Je gesprek staat klaar. Ga verder waar je was, of begin iets nieuws.
+              Ga verder waar je was, of begin iets nieuws.
             </Text>
           )}
 
-          {/* Next steps */}
           <View style={s.cards}>
             {NEXT_STEPS.map((step, i) => (
-              <TouchableOpacity key={i} style={s.card} onPress={handlers[i]} activeOpacity={0.8}>
+              <TouchableOpacity key={i} style={s.card} onPress={handlers[i]} activeOpacity={0.75}>
                 <View style={s.cardIcon}>
-                  <Feather name={step.icon} size={18} color={OB.accent} />
+                  <Feather name={step.icon} size={16} color={OB.accent} />
                 </View>
                 <View style={s.cardBody}>
                   <Text style={s.cardTitle}>{step.title}</Text>
                   <Text style={s.cardDesc}>{step.desc}</Text>
                 </View>
-                <Feather name="chevron-right" size={16} color={OB.textFaint} />
+                <Feather name="chevron-right" size={15} color={OB.textFaint} />
               </TouchableOpacity>
             ))}
           </View>
@@ -80,9 +80,9 @@ export function ConfirmationStep({ trialEndsAt, onChat, onTests, onSettings, onD
       </View>
 
       <View style={s.ctaWrap}>
-        <TouchableOpacity style={s.ctaBtn} onPress={onDone} activeOpacity={0.85}>
+        <TouchableOpacity style={s.cta} onPress={onDone} activeOpacity={0.85}>
           <Text style={s.ctaText}>Begin met {APP_NAME}</Text>
-          <Feather name="arrow-right" size={17} color={OB.white} />
+          <Feather name="arrow-right" size={17} color={OB.inverse} />
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -91,40 +91,49 @@ export function ConfirmationStep({ trialEndsAt, onChat, onTests, onSettings, onD
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: OB.bg },
-  content: { flex: 1, paddingHorizontal: 24, paddingTop: 40 },
-  checkWrap: { alignItems: 'center', marginBottom: 32 },
-  checkCircle: {
-    width: 72, height: 72, borderRadius: 36,
-    backgroundColor: OB.successBg, borderWidth: 1.5,
-    borderColor: OB.success + '55', alignItems: 'center', justifyContent: 'center',
+  content: { flex: 1, paddingHorizontal: 24, paddingTop: 24, alignItems: 'center' },
+  checkWrap: { marginBottom: 18 },
+  haloOuter: {
+    width: 80, height: 80, borderRadius: 40,
+    borderWidth: 1, borderColor: OB.accent + '22', backgroundColor: OB.accentSoft,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  haloInner: {
+    width: 56, height: 56, borderRadius: 28,
+    borderWidth: 1, borderColor: OB.accent + '55', backgroundColor: OB.bg,
+    alignItems: 'center', justifyContent: 'center',
   },
   headline: {
-    fontSize: 30, fontWeight: '500', color: OB.textPrimary,
-    lineHeight: 38, marginBottom: 14, textAlign: 'center',
+    fontSize: 28, fontWeight: '500', color: OB.textPrimary,
+    lineHeight: 34, marginBottom: 8, textAlign: 'center',
+    fontStyle: 'italic',
+    fontFamily: Platform.select({ ios: OBFonts.serif, android: 'serif' }),
+    letterSpacing: -0.4,
   },
   subtext: {
-    fontSize: 15, color: OB.textSecondary, lineHeight: 23,
-    textAlign: 'center', marginBottom: 32,
+    fontSize: 14, color: OB.textMuted, lineHeight: 20,
+    textAlign: 'center', marginBottom: 24, paddingHorizontal: 12,
   },
-  cards: { gap: 12 },
+  cards: { gap: 8, width: '100%' },
   card: {
-    backgroundColor: OB.surface, borderWidth: 1, borderColor: OB.border,
-    borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14,
+    backgroundColor: OB.surface, borderWidth: 0.5, borderColor: OB.border,
+    borderRadius: 12, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 12,
   },
   cardIcon: {
-    width: 40, height: 40, borderRadius: 12,
+    width: 34, height: 34, borderRadius: 10,
     backgroundColor: OB.accentSoft, alignItems: 'center', justifyContent: 'center',
   },
   cardBody: { flex: 1 },
-  cardTitle: { fontSize: 15, fontWeight: '600', color: OB.textPrimary },
-  cardDesc: { fontSize: 13, color: OB.textMuted, marginTop: 2 },
-  ctaWrap: { paddingHorizontal: 24, paddingBottom: 28, paddingTop: 8 },
-  ctaBtn: {
-    height: 56, borderRadius: 16, backgroundColor: OB.accent,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
-    ...(
-      { shadowColor: OB.accent, shadowOpacity: 0.35, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } }
-    ),
+  cardTitle: { fontSize: 14, fontWeight: '600', color: OB.textPrimary },
+  cardDesc: { fontSize: 12.5, color: OB.textMuted, marginTop: 1 },
+  ctaWrap: { paddingHorizontal: 24, paddingBottom: 16, paddingTop: 6 },
+  cta: {
+    height: 52, borderRadius: 14, backgroundColor: OB.accent,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9,
+    ...Platform.select({
+      ios: { shadowColor: OB.accent, shadowOpacity: 0.35, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } },
+      android: { elevation: 3 },
+    }),
   },
-  ctaText: { fontSize: 16, fontWeight: '600', color: OB.white },
+  ctaText: { fontSize: 15.5, fontWeight: '700', color: OB.inverse, letterSpacing: 0.1 },
 });

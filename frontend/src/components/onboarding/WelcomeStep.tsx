@@ -1,7 +1,6 @@
 import React from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet,
-  ScrollView, Platform, Animated,
+  View, Text, TouchableOpacity, StyleSheet, Platform, Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -13,56 +12,56 @@ interface Props {
 }
 
 const FEATURES = [
-  'AI-gesprekspartner gebaseerd op Claude',
-  '24 gevalideerde zelftesten (PHQ-9, GAD-7, ...)',
-  'Privacy-first: anoniem starten mogelijk',
+  { icon: 'message-square' as const, label: 'AI-gesprek dat échte vragen stelt' },
+  { icon: 'check-square' as const, label: '24 gevalideerde zelftesten' },
+  { icon: 'lock' as const, label: 'Anoniem starten — EU-servers' },
 ];
 
 export function WelcomeStep({ onNext }: Props) {
-  const fadeAnim = React.useRef(new Animated.Value(0)).current;
+  const fade = React.useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {
-    Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }).start();
+    Animated.timing(fade, { toValue: 1, duration: 600, useNativeDriver: true }).start();
   }, []);
 
   return (
     <SafeAreaView style={s.root}>
-      <Animated.View style={[s.content, { opacity: fadeAnim }]}>
-        <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-          {/* Logo mark */}
-          <View style={s.logoWrap}>
-            <View style={s.logoCircle}>
-              <Feather name="compass" size={22} color={OB.accent} />
+      <Animated.View style={[s.content, { opacity: fade }]}>
+        <View style={s.brandRow}>
+          <View style={s.dot} />
+          <Text style={s.brand}>{APP_NAME}</Text>
+        </View>
+
+        <View style={s.center}>
+          <View style={s.haloOuter}>
+            <View style={s.haloInner}>
+              <Feather name="compass" size={28} color={OB.accent} />
             </View>
-            <Text style={s.logoText}>{APP_NAME}</Text>
           </View>
 
-          {/* Headline */}
-          <Text style={s.headline}>Welkom bij{`\n`}{APP_NAME}</Text>
-
-          {/* Body */}
+          <Text style={s.headline}>Welkom bij {APP_NAME}</Text>
           <Text style={s.body}>
-            {'Een veilige plek om te praten over wat er is.\nGeen dwang om te veranderen. Geen toxic positiviteit.\nGewoon een gesprek, wanneer je het nodig hebt.'}
+            Een rustige plek om eerlijk te praten over wat speelt. Geen oordeel, geen toxic positiviteit.
           </Text>
 
-          {/* Feature bullets */}
-          <View style={s.featuresWrap}>
-            {FEATURES.map((f, i) => (
-              <View key={i} style={s.featureRow}>
-                <View style={s.featureDot} />
-                <Text style={s.featureText}>{f}</Text>
+          <View style={s.features}>
+            {FEATURES.map((f) => (
+              <View key={f.label} style={s.feat}>
+                <View style={s.featIcon}>
+                  <Feather name={f.icon} size={13} color={OB.accent} />
+                </View>
+                <Text style={s.featText}>{f.label}</Text>
               </View>
             ))}
           </View>
-        </ScrollView>
+        </View>
 
-        {/* CTA */}
-        <View style={s.ctaWrap}>
-          <TouchableOpacity style={s.ctaBtn} onPress={onNext} activeOpacity={0.85}>
+        <View style={s.bottom}>
+          <TouchableOpacity style={s.cta} onPress={onNext} activeOpacity={0.85}>
             <Text style={s.ctaText}>Begin gesprek</Text>
-            <Feather name="arrow-right" size={17} color={OB.white} />
+            <Feather name="arrow-right" size={17} color={OB.inverse} />
           </TouchableOpacity>
-          <Text style={s.privacyNote}>Privacy en data-gebruik: EU-servers, minimale opslag</Text>
+          <Text style={s.privacy}>Anoniem · Versleuteld · Niets wordt doorverkocht</Text>
         </View>
       </Animated.View>
     </SafeAreaView>
@@ -71,35 +70,47 @@ export function WelcomeStep({ onNext }: Props) {
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: OB.bg },
-  content: { flex: 1 },
-  scroll: { paddingHorizontal: 28, paddingTop: 56, paddingBottom: 24 },
-  logoWrap: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 48 },
-  logoCircle: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: OB.accentSoft, borderWidth: 1,
-    borderColor: OB.accent + '44', alignItems: 'center', justifyContent: 'center',
+  content: { flex: 1, paddingHorizontal: 24, paddingTop: 12, paddingBottom: 16 },
+  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 7, paddingVertical: 8 },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: OB.textPrimary },
+  brand: { fontSize: 15, fontWeight: '600', color: OB.textPrimary, letterSpacing: -0.3 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 14 },
+  haloOuter: {
+    width: 92, height: 92, borderRadius: 46,
+    borderWidth: 1, borderColor: OB.accent + '22', backgroundColor: OB.accentSoft,
+    alignItems: 'center', justifyContent: 'center', marginBottom: 4,
   },
-  logoText: { fontSize: 17, fontWeight: '600', color: OB.textPrimary, letterSpacing: 0.5 },
+  haloInner: {
+    width: 64, height: 64, borderRadius: 32,
+    borderWidth: 1, borderColor: OB.accent + '55', backgroundColor: OB.bg,
+    alignItems: 'center', justifyContent: 'center',
+  },
   headline: {
-    fontSize: 38, fontWeight: '500', lineHeight: 46,
-    color: OB.textPrimary, fontStyle: 'italic',
+    fontSize: 28, fontWeight: '500', color: OB.textPrimary,
+    fontStyle: 'italic',
     fontFamily: Platform.select({ ios: OBFonts.serif, android: 'serif' }),
-    letterSpacing: -0.5, marginBottom: 24,
+    letterSpacing: -0.4, textAlign: 'center',
   },
-  body: { fontSize: 17, lineHeight: 26, color: OB.textSecondary, marginBottom: 36 },
-  featuresWrap: { gap: 14 },
-  featureRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  featureDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: OB.accent },
-  featureText: { fontSize: 15, color: OB.textMuted, flex: 1, lineHeight: 22 },
-  ctaWrap: { paddingHorizontal: 28, paddingBottom: 20, paddingTop: 8 },
-  ctaBtn: {
-    backgroundColor: OB.accent, height: 56, borderRadius: 16,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
+  body: {
+    fontSize: 14.5, lineHeight: 21, color: OB.textMuted,
+    textAlign: 'center', maxWidth: 320, paddingHorizontal: 12, marginBottom: 4,
+  },
+  features: { width: '100%', maxWidth: 320, gap: 10, marginTop: 6 },
+  feat: { flexDirection: 'row', alignItems: 'center', gap: 11 },
+  featIcon: {
+    width: 28, height: 28, borderRadius: 8,
+    backgroundColor: OB.accentSoft, alignItems: 'center', justifyContent: 'center',
+  },
+  featText: { fontSize: 13.5, color: OB.textSecondary, flex: 1, lineHeight: 19 },
+  bottom: { gap: 10 },
+  cta: {
+    height: 52, borderRadius: 14, backgroundColor: OB.accent,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9,
     ...Platform.select({
-      ios: { shadowColor: OB.accent, shadowOpacity: 0.4, shadowRadius: 16, shadowOffset: { width: 0, height: 4 } },
-      android: { elevation: 4 },
+      ios: { shadowColor: OB.accent, shadowOpacity: 0.35, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } },
+      android: { elevation: 3 },
     }),
   },
-  ctaText: { fontSize: 16, fontWeight: '600', color: OB.white, letterSpacing: 0.2 },
-  privacyNote: { textAlign: 'center', fontSize: 12, color: OB.textFaint, marginTop: 14 },
+  ctaText: { fontSize: 15.5, fontWeight: '700', color: OB.inverse, letterSpacing: 0.1 },
+  privacy: { textAlign: 'center', fontSize: 11, color: OB.textFaint, letterSpacing: 0.3 },
 });

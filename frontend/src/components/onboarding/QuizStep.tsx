@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet,
-  ScrollView, Platform,
+  View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { OB, OBFonts } from './ob-theme';
+import { APP_NAME } from '@/src/config/branding';
 
 interface QuizConfig {
   progress: string;
@@ -30,7 +30,6 @@ export function QuizStep({ config, onAnswer, onSkip }: Props) {
         prev.includes(opt) ? prev.filter((x) => x !== opt) : [...prev, opt]
       );
     } else {
-      // Single select — auto-advance
       onAnswer(opt);
     }
   };
@@ -45,13 +44,19 @@ export function QuizStep({ config, onAnswer, onSkip }: Props) {
 
   return (
     <SafeAreaView style={s.root}>
-      {/* Progress bar */}
-      <View style={s.progressTrack}>
-        <View style={[s.progressFill, { width: `${progress * 100}%` }]} />
+      <View style={s.header}>
+        <View style={s.progressTrack}>
+          <View style={[s.progressFill, { width: `${progress * 100}%` }]} />
+        </View>
+        <View style={s.headRow}>
+          <Text style={s.stepLabel}>Stap {config.progress}</Text>
+          <TouchableOpacity onPress={onSkip} hitSlop={8}>
+            <Text style={s.skipTopText}>Overslaan</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={s.stepLabel}>{config.progress} van 3</Text>
         <Text style={s.question}>{config.question}</Text>
         {config.subtext ? <Text style={s.subtext}>{config.subtext}</Text> : null}
 
@@ -65,9 +70,13 @@ export function QuizStep({ config, onAnswer, onSkip }: Props) {
                 onPress={() => toggle(opt)}
                 activeOpacity={0.75}
               >
-                {config.multiSelect && (
+                {config.multiSelect ? (
                   <View style={[s.checkbox, isSelected && s.checkboxSelected]}>
-                    {isSelected && <Feather name="check" size={13} color={OB.white} />}
+                    {isSelected && <Feather name="check" size={12} color={OB.inverse} />}
+                  </View>
+                ) : (
+                  <View style={[s.radio, isSelected && s.radioSelected]}>
+                    {isSelected && <View style={s.radioDot} />}
                   </View>
                 )}
                 <Text style={[s.cardText, isSelected && s.cardTextSelected]}>{opt}</Text>
@@ -80,22 +89,12 @@ export function QuizStep({ config, onAnswer, onSkip }: Props) {
       {config.multiSelect && (
         <View style={s.ctaWrap}>
           <TouchableOpacity
-            style={[s.ctaBtn, selected.length === 0 && s.ctaBtnDisabled]}
+            style={[s.cta, selected.length === 0 && s.ctaDisabled]}
             onPress={handleNext}
             activeOpacity={0.85}
           >
-            <Text style={s.ctaText}>Verder</Text>
-            <Feather name="arrow-right" size={16} color={OB.white} />
-          </TouchableOpacity>
-          <TouchableOpacity style={s.skipBtn} onPress={onSkip}>
-            <Text style={s.skipText}>Liever overslaan</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-      {!config.multiSelect && (
-        <View style={s.ctaWrap}>
-          <TouchableOpacity style={s.skipBtn} onPress={onSkip}>
-            <Text style={s.skipText}>Liever overslaan</Text>
+            <Text style={s.ctaText}>{selected.length > 0 ? `Verder · ${selected.length} gekozen` : 'Overslaan'}</Text>
+            <Feather name="arrow-right" size={16} color={OB.inverse} />
           </TouchableOpacity>
         </View>
       )}
@@ -119,71 +118,76 @@ export const QUIZ_INTENT: QuizConfig = {
 
 export const QUIZ_MOOD: QuizConfig = {
   progress: '2/3',
-  question: 'Hoe zou je je gemoedsrust de laatste weken omschrijven?',
+  question: 'Hoe was het de laatste weken?',
   options: [
-    'Overwegend rustig, met af en toe piekmomenten',
-    'Wisselend – goede en moeilijke dagen door elkaar',
+    'Rustig, met af en toe een piek',
+    'Wisselend — goede en moeilijke door elkaar',
     'Vaak onrustig of gespannen',
     'Overwegend zwaar of uitgeput',
-    'Wil ik liever niet zeggen',
+    'Liever niet zeggen',
   ],
   multiSelect: false,
-  subtext: 'Dit helpt om het gesprek af te stemmen op waar je nu staat.',
+  subtext: 'Dit helpt om af te stemmen op waar je nu staat.',
 };
 
 export const QUIZ_THERAPY: QuizConfig = {
   progress: '3/3',
-  question: 'Heb je ervaring met therapie of professionele hulp?',
+  question: 'Heb je ervaring met therapie?',
   options: [
-    'Ja, ik ga momenteel',
+    'Ja, momenteel',
     'Ja, in het verleden',
     'Nee, maar ik overweeg het',
     'Nee, en dat is nu niet aan de orde',
     'Liever niet zeggen',
   ],
   multiSelect: false,
-  subtext:
-    'Kompas is geen vervanging voor therapie, maar kan wel ondersteunen tussen sessies door of helpen je gedachten te ordenen.',
+  subtext: `${APP_NAME} vervangt geen therapie, maar kan ondersteunen tussen sessies door.`,
 };
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: OB.bg },
-  progressTrack: { height: 2, backgroundColor: OB.border, width: '100%' },
+  header: { paddingHorizontal: 0, paddingTop: 8 },
+  progressTrack: { height: 2, backgroundColor: OB.border, width: '100%', marginBottom: 12 },
   progressFill: { height: 2, backgroundColor: OB.accent },
-  scroll: { paddingHorizontal: 24, paddingTop: 28, paddingBottom: 100 },
-  stepLabel: { fontSize: 12, color: OB.accent, fontWeight: '600', letterSpacing: 0.6, marginBottom: 16 },
+  headRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: 20, marginBottom: 4,
+  },
+  stepLabel: { fontSize: 11.5, color: OB.accent, fontWeight: '700', letterSpacing: 0.5, textTransform: 'uppercase' },
+  skipTopText: { fontSize: 13, color: OB.textMuted },
+  scroll: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 24 },
   question: {
-    fontSize: 26, fontWeight: '500', lineHeight: 34, color: OB.textPrimary,
+    fontSize: 22, fontWeight: '500', lineHeight: 28, color: OB.textPrimary,
     fontStyle: 'italic',
     fontFamily: Platform.select({ ios: OBFonts.serif, android: 'serif' }),
-    marginBottom: 12,
+    marginBottom: 8, letterSpacing: -0.3,
   },
-  subtext: { fontSize: 13, color: OB.textMuted, marginBottom: 24, lineHeight: 19 },
-  options: { gap: 10, marginTop: 8 },
+  subtext: { fontSize: 13, color: OB.textMuted, marginBottom: 18, lineHeight: 19 },
+  options: { gap: 8, marginTop: 4 },
   card: {
-    backgroundColor: OB.surface, borderWidth: 1, borderColor: OB.border,
-    borderRadius: 14, padding: 18, flexDirection: 'row', alignItems: 'center', gap: 14,
-    minHeight: 56,
+    backgroundColor: OB.surface, borderWidth: 0.5, borderColor: OB.border,
+    borderRadius: 12, paddingVertical: 14, paddingHorizontal: 14,
+    flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 52,
   },
   cardSelected: { borderColor: OB.accent, backgroundColor: OB.accentSoft },
-  cardText: { fontSize: 15, color: OB.textSecondary, flex: 1, lineHeight: 21 },
-  cardTextSelected: { color: OB.textPrimary },
+  cardText: { fontSize: 14, color: OB.textSecondary, flex: 1, lineHeight: 19 },
+  cardTextSelected: { color: OB.textPrimary, fontWeight: '500' },
   checkbox: {
-    width: 22, height: 22, borderRadius: 6, borderWidth: 1.5,
+    width: 20, height: 20, borderRadius: 6, borderWidth: 1.5,
     borderColor: OB.textFaint, alignItems: 'center', justifyContent: 'center',
   },
   checkboxSelected: { backgroundColor: OB.accent, borderColor: OB.accent },
-  ctaWrap: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    paddingHorizontal: 24, paddingBottom: 32, paddingTop: 12,
-    backgroundColor: OB.bg,
+  radio: {
+    width: 20, height: 20, borderRadius: 10, borderWidth: 1.5,
+    borderColor: OB.textFaint, alignItems: 'center', justifyContent: 'center',
   },
-  ctaBtn: {
-    height: 54, borderRadius: 16, backgroundColor: OB.accent,
+  radioSelected: { borderColor: OB.accent },
+  radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: OB.accent },
+  ctaWrap: { paddingHorizontal: 20, paddingBottom: 14, paddingTop: 6, backgroundColor: OB.bg },
+  cta: {
+    height: 50, borderRadius: 14, backgroundColor: OB.accent,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
   },
-  ctaBtnDisabled: { opacity: 0.5 },
-  ctaText: { fontSize: 16, fontWeight: '600', color: OB.white },
-  skipBtn: { alignItems: 'center', paddingVertical: 12 },
-  skipText: { fontSize: 13, color: OB.textMuted },
+  ctaDisabled: { backgroundColor: OB.surface, borderWidth: 0.5, borderColor: OB.border },
+  ctaText: { fontSize: 14.5, fontWeight: '700', color: OB.inverse },
 });

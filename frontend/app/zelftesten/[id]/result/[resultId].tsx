@@ -150,7 +150,7 @@ export default function TestResult() {
             <View style={styles.narrativeLoading}>
               <ActivityIndicator color={palette.accent} size="small" />
               <Text style={[styles.narrativeLoadingText, { color: palette.textMuted }]}>
-                Kompas schrijft je uitleg…
+                Junie schrijft je uitleg…
               </Text>
             </View>
           ) : (

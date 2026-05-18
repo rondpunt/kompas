@@ -432,11 +432,12 @@ agent_communication:
 
   - agent: "main"
     message: |
-      Iteratie 8 — Community launch-scope toegevoegd (mini-twitter anoniem + premium gating).
-      Nieuwe scope om te testen:
-      1) Backend community endpoints: GET /api/community/me, GET /api/community/feed, POST /api/community/posts.
-      2) Nickname flow: auto-nickname + custom nickname via POST /api/community/nickname.
-      3) Premium gating: free = read-only; plus/trialing = posten + DM.
-      4) DM flow: GET /api/community/dm/inbox + GET/POST /api/community/dm/thread/{peer_nickname}.
-      5) Frontend routes: /community, /community/inbox, /community/[peer] met read-only/plus gedrag.
+      Iteratie 9 — Volledige UI samenhang & rebranding doorgevoerd (Junie).
+      - SecureHandshake kleuren van groen → warm amber (geen "groene slot" meer).
+      - Onboarding components (Welcome/Quiz/Privacy/Paywall/Confirmation) gebruiken nu ob-theme dat de NIGHT palette spiegelt (#0a0a0a / #f59e0b).
+      - Compactere typografie, minder geforceerd scrollen, ChatGPT-achtige layout.
+      - Brand sweep: instellingen.tsx, profiel(/index, /[section]), result/[resultId] tonen nu "Junie".
+      - Settings: PlusModal nu actief vanuit "Probeer Junie Plus" + nieuwe "Gemeenschap" sectie naar /community.
+      - Confirmation step: check-icoon nu orange amber i.p.v. groen.
+      Geen backend wijzigingen.
 

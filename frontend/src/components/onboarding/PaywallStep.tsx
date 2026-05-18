@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet,
-  ScrollView, Platform,
+  View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
@@ -17,11 +16,10 @@ interface Props {
 }
 
 const FEATURES = [
-  'Onbeperkte gesprekken met AI',
-  '24 gevalideerde tests (PHQ-9, GAD-7, ASRS, ...)',
-  'Cross-session geheugen (onthoudt eerdere gesprekken)',
-  'PDF-export voor je therapeut',
-  'Voice mode beschikbaar',
+  'Onbeperkte gesprekken',
+  'Cross-session geheugen',
+  'Community: posten + DM',
+  'PDF-export voor therapeut',
 ];
 
 export function PaywallStep({ userId, onTrialStarted, onSkip }: Props) {
@@ -30,8 +28,6 @@ export function PaywallStep({ userId, onTrialStarted, onSkip }: Props) {
 
   const trialEnd = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
   const trialEndStr = trialEnd.toLocaleDateString('nl-BE', { day: 'numeric', month: 'long' });
-  const reminderStr = new Date(Date.now() + 13 * 24 * 60 * 60 * 1000)
-    .toLocaleDateString('nl-BE', { day: 'numeric', month: 'long' });
 
   const startTrial = async () => {
     setLoading(true);
@@ -39,102 +35,85 @@ export function PaywallStep({ userId, onTrialStarted, onSkip }: Props) {
       const data = await api.createStripeCheckoutSession({ plan, user_id: userId ?? 'anonymous' });
       if (data.checkoutUrl) {
         await WebBrowser.openBrowserAsync(data.checkoutUrl);
-        onTrialStarted(trialEnd.toISOString());
-        return;
       }
     } catch {
-      // Stripe not configured — graceful fallback: trial started locally
+      // graceful fallback
     }
-    // Fallback: local trial
     onTrialStarted(trialEnd.toISOString());
     setLoading(false);
   };
 
   const price = plan === 'monthly' ? '12,99' : '119,99';
-  const priceNote = plan === 'annual' ? '€10/maand — bespaar €36' : null;
 
   return (
     <SafeAreaView style={s.root}>
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <Text style={s.headline}>Probeer {APP_PLUS_NAME}{`\n`}14 dagen gratis</Text>
-        <Text style={s.subtext}>Geen betaling vandaag. Annuleer op elk moment.</Text>
+        <View style={s.plusBadge}>
+          <Feather name="zap" size={11} color={OB.inverse} />
+          <Text style={s.plusBadgeText}>{APP_PLUS_NAME.toUpperCase()}</Text>
+        </View>
 
-        {/* Features */}
+        <Text style={s.headline}>14 dagen gratis proberen</Text>
+        <Text style={s.subtext}>Geen betaling vandaag. Annuleer wanneer je wil.</Text>
+
         <View style={s.featuresCard}>
           {FEATURES.map((f) => (
             <View key={f} style={s.featureRow}>
-              <Feather name="check" size={16} color={OB.success} />
+              <View style={s.checkDot}>
+                <Feather name="check" size={11} color={OB.inverse} />
+              </View>
               <Text style={s.featureText}>{f}</Text>
             </View>
           ))}
         </View>
 
-        {/* Timeline */}
-        <View style={s.timeline}>
-          <View style={s.timelineNode}>
-            <View style={[s.nodeDot, s.nodeDotActive]} />
-            <Text style={s.nodeLabel}>Vandaag</Text>
-            <Text style={s.nodeValue}>Gratis</Text>
-          </View>
-          <View style={s.timelineLine} />
-          <View style={s.timelineNode}>
-            <View style={s.nodeDot} />
-            <Text style={s.nodeLabel}>{reminderStr}</Text>
-            <Text style={s.nodeValue}>Herinnering</Text>
-          </View>
-          <View style={s.timelineLine} />
-          <View style={s.timelineNode}>
-            <View style={s.nodeDot} />
-            <Text style={s.nodeLabel}>{trialEndStr}</Text>
-            <Text style={s.nodeValue}>€{price}</Text>
-          </View>
-        </View>
-
-        {/* Plan toggle */}
-        <View style={s.planToggle}>
+        <View style={s.planRow}>
           <TouchableOpacity
             testID="paywall-plan-monthly"
             style={[s.planCard, plan === 'monthly' && s.planCardSelected]}
             onPress={() => setPlan('monthly')}
+            activeOpacity={0.8}
           >
-            <Text style={[s.planPrice, plan === 'monthly' && s.planPriceSelected]}>€12,99</Text>
-            <Text style={s.planInterval}>per maand</Text>
+            <Text style={[s.planLabel, plan === 'monthly' && s.planLabelSel]}>Maandelijks</Text>
+            <Text style={[s.planPrice, plan === 'monthly' && s.planPriceSel]}>€12,99</Text>
+            <Text style={s.planUnit}>/maand</Text>
           </TouchableOpacity>
           <TouchableOpacity
             testID="paywall-plan-annual"
             style={[s.planCard, plan === 'annual' && s.planCardSelected]}
             onPress={() => setPlan('annual')}
+            activeOpacity={0.8}
           >
-            <View style={s.bestValueBadge}><Text style={s.bestValueText}>Beste deal</Text></View>
-            <Text style={[s.planPrice, plan === 'annual' && s.planPriceSelected]}>€119,99</Text>
-            <Text style={s.planInterval}>per jaar</Text>
-            <Text style={s.planSavings}>€10/mnd • bespaar €36</Text>
+            <View style={s.bestBadge}><Text style={s.bestText}>BESPAAR €36</Text></View>
+            <Text style={[s.planLabel, plan === 'annual' && s.planLabelSel]}>Jaarlijks</Text>
+            <Text style={[s.planPrice, plan === 'annual' && s.planPriceSel]}>€119,99</Text>
+            <Text style={s.planUnit}>€10/maand</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Social proof */}
-        <View style={s.socialProof}>
-          <Text style={s.testimonial}>{`“${APP_NAME} helpt me om mijn gedachten te ordenen tussen therapie-sessies door.”`}</Text>
-          <Text style={s.testimonialName}>— Sarah, 34, Gent</Text>
-          <Text style={s.rating}>★★★★★ 4.8 gemiddeld (127 beoordelingen)</Text>
+        <View style={s.timelineRow}>
+          <Feather name="calendar" size={13} color={OB.accent} />
+          <Text style={s.timelineText}>
+            Eerste betaling op <Text style={{ color: OB.textPrimary, fontWeight: '600' }}>{trialEndStr}</Text> — herinnering 1 dag ervoor.
+          </Text>
         </View>
 
-        <Text style={s.legal}>Gebruiksvoorwaarden • Privacybeleid • Annulatievoorwaarden</Text>
+        <Text style={s.legal}>{APP_NAME} vervangt geen therapie. Anoniem starten kan ook gratis.</Text>
       </ScrollView>
 
       <View style={s.ctaWrap}>
         <TouchableOpacity
           testID="paywall-start-trial"
-          style={[s.ctaBtn, loading && { opacity: 0.7 }]}
+          style={[s.cta, loading && { opacity: 0.7 }]}
           onPress={startTrial}
           disabled={loading}
           activeOpacity={0.85}
         >
-          <Text style={s.ctaText}>{loading ? 'Bezig...' : 'Start gratis trial →'}</Text>
+          <Text style={s.ctaText}>{loading ? 'Bezig…' : 'Start gratis trial'}</Text>
+          <Feather name="arrow-right" size={16} color={OB.inverse} />
         </TouchableOpacity>
         <TouchableOpacity testID="paywall-skip" style={s.skipBtn} onPress={onSkip}>
-          <Text style={s.skipText}>Liever anoniem verder zonder Plus-functies</Text>
+          <Text style={s.skipText}>Liever zonder Plus</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -143,63 +122,64 @@ export function PaywallStep({ userId, onTrialStarted, onSkip }: Props) {
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: OB.bg },
-  scroll: { paddingHorizontal: 24, paddingTop: 40, paddingBottom: 20 },
+  scroll: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 10 },
+  plusBadge: {
+    alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: OB.accent, paddingHorizontal: 8, paddingVertical: 4,
+    borderRadius: 999, marginBottom: 14,
+  },
+  plusBadgeText: { color: OB.inverse, fontSize: 10.5, fontWeight: '700', letterSpacing: 0.4 },
   headline: {
-    fontSize: 28, fontWeight: '500', lineHeight: 36, color: OB.textPrimary,
+    fontSize: 26, fontWeight: '500', lineHeight: 32, color: OB.textPrimary,
     fontStyle: 'italic',
     fontFamily: Platform.select({ ios: OBFonts.serif, android: 'serif' }),
-    marginBottom: 10,
+    marginBottom: 6, letterSpacing: -0.3,
   },
-  subtext: { fontSize: 15, color: OB.success, marginBottom: 28, fontWeight: '500' },
+  subtext: { fontSize: 14, color: OB.textMuted, marginBottom: 18 },
   featuresCard: {
-    backgroundColor: OB.surface, borderRadius: 16, padding: 20,
-    gap: 12, marginBottom: 28, borderWidth: 1, borderColor: OB.border,
+    backgroundColor: OB.surface, borderRadius: 14, padding: 14,
+    gap: 10, marginBottom: 16, borderWidth: 0.5, borderColor: OB.border,
   },
-  featureRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  featureText: { fontSize: 14, color: OB.textSecondary, flex: 1, lineHeight: 20 },
-  timeline: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: OB.surface, borderRadius: 16, padding: 20,
-    marginBottom: 24, borderWidth: 1, borderColor: OB.border,
+  featureRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  checkDot: {
+    width: 18, height: 18, borderRadius: 9,
+    backgroundColor: OB.accent, alignItems: 'center', justifyContent: 'center',
   },
-  timelineNode: { flex: 1, alignItems: 'center', gap: 6 },
-  nodeDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: OB.border },
-  nodeDotActive: { backgroundColor: OB.accent },
-  nodeLabel: { fontSize: 12, color: OB.textMuted, textAlign: 'center' },
-  nodeValue: { fontSize: 13, fontWeight: '600', color: OB.textPrimary, textAlign: 'center' },
-  timelineLine: { flex: 1, height: 1, backgroundColor: OB.border, marginTop: -12 },
-  planToggle: { flexDirection: 'row', gap: 12, marginBottom: 28 },
+  featureText: { fontSize: 13.5, color: OB.textSecondary, flex: 1, lineHeight: 19 },
+  planRow: { flexDirection: 'row', gap: 10, marginBottom: 14 },
   planCard: {
-    flex: 1, backgroundColor: OB.surface, borderRadius: 16,
-    padding: 18, borderWidth: 1.5, borderColor: OB.border, alignItems: 'center',
+    flex: 1, backgroundColor: OB.surface, borderRadius: 14, padding: 14,
+    borderWidth: 1.5, borderColor: OB.border, position: 'relative',
   },
   planCardSelected: { borderColor: OB.accent, backgroundColor: OB.accentSoft },
-  bestValueBadge: {
-    backgroundColor: OB.accent, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, marginBottom: 8,
+  planLabel: { fontSize: 12, color: OB.textMuted, fontWeight: '500', marginBottom: 6 },
+  planLabelSel: { color: OB.textPrimary },
+  planPrice: { fontSize: 22, fontWeight: '700', color: OB.textSecondary, letterSpacing: -0.5 },
+  planPriceSel: { color: OB.textPrimary },
+  planUnit: { fontSize: 11.5, color: OB.textMuted, marginTop: 2 },
+  bestBadge: {
+    position: 'absolute', top: -8, right: 8,
+    backgroundColor: OB.accent, borderRadius: 999, paddingHorizontal: 7, paddingVertical: 2,
   },
-  bestValueText: { fontSize: 11, fontWeight: '700', color: OB.white },
-  planPrice: { fontSize: 22, fontWeight: '700', color: OB.textSecondary },
-  planPriceSelected: { color: OB.textPrimary },
-  planInterval: { fontSize: 12, color: OB.textMuted, marginTop: 4 },
-  planSavings: { fontSize: 11, color: OB.success, marginTop: 4 },
-  socialProof: {
-    backgroundColor: OB.surface, borderRadius: 16, padding: 20,
-    marginBottom: 20, borderWidth: 1, borderColor: OB.border,
+  bestText: { color: OB.inverse, fontSize: 9, fontWeight: '700', letterSpacing: 0.4 },
+  timelineRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingVertical: 10, paddingHorizontal: 12,
+    backgroundColor: OB.surface, borderRadius: 10,
+    borderWidth: 0.5, borderColor: OB.border, marginBottom: 12,
   },
-  testimonial: { fontSize: 14, color: OB.textSecondary, lineHeight: 21, fontStyle: 'italic', marginBottom: 8 },
-  testimonialName: { fontSize: 13, color: OB.textMuted, marginBottom: 6 },
-  rating: { fontSize: 13, color: OB.textMuted },
-  legal: { textAlign: 'center', fontSize: 11, color: OB.textFaint, marginBottom: 8 },
-  ctaWrap: { paddingHorizontal: 24, paddingBottom: 28, paddingTop: 8, backgroundColor: OB.bg },
-  ctaBtn: {
-    height: 56, borderRadius: 16, backgroundColor: OB.accent,
-    alignItems: 'center', justifyContent: 'center',
+  timelineText: { fontSize: 12.5, color: OB.textMuted, flex: 1, lineHeight: 17 },
+  legal: { textAlign: 'center', fontSize: 11, color: OB.textFaint, marginBottom: 6 },
+  ctaWrap: { paddingHorizontal: 20, paddingBottom: 16, paddingTop: 6, backgroundColor: OB.bg },
+  cta: {
+    height: 52, borderRadius: 14, backgroundColor: OB.accent,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     ...Platform.select({
       ios: { shadowColor: OB.accent, shadowOpacity: 0.4, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } },
       android: { elevation: 4 },
     }),
   },
-  ctaText: { fontSize: 16, fontWeight: '700', color: OB.white },
-  skipBtn: { alignItems: 'center', paddingVertical: 14 },
+  ctaText: { fontSize: 15, fontWeight: '700', color: OB.inverse },
+  skipBtn: { alignItems: 'center', paddingVertical: 10 },
   skipText: { fontSize: 13, color: OB.textMuted },
 });

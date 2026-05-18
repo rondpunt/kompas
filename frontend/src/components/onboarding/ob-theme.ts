@@ -1,25 +1,28 @@
-// Onboarding design tokens — Kompas spec (Deel D)
-// Separate from main app theme — night variant per spec
+// Onboarding design tokens — Junie warm-dark premium (matches main NIGHT palette)
+// Single source of truth for onboarding visuals.
 
 export const OB = {
-  bg: '#0A0F1E',
-  surface: '#141B2E',
-  elevated: '#1E2536',
-  border: '#2A3447',
-  borderFocus: '#5B7FFF',
-  textPrimary: '#FFFFFF',
-  textSecondary: '#B4B9C8',
-  textMuted: '#6B7280',
-  textFaint: '#4A5A7A',
-  accent: '#5B7FFF',
-  accentSoft: 'rgba(91,127,255,0.15)',
-  success: '#10B981',
-  successBg: 'rgba(16,185,129,0.12)',
-  danger: '#EF4444',
-  white: '#FFFFFF',
+  bg: '#0a0a0a',
+  surface: '#161616',
+  elevated: '#1f1f1f',
+  border: '#262626',
+  borderSubtle: '#1f1f1f',
+  borderFocus: '#f59e0b',
+  textPrimary: '#fafafa',
+  textSecondary: '#d4d4d4',
+  textMuted: '#a3a3a3',
+  textFaint: '#525252',
+  accent: '#f59e0b',
+  accentHover: '#fbbf24',
+  accentSoft: 'rgba(245, 158, 11, 0.16)',
+  success: '#f59e0b', // unified — no jarring green check on confirmation
+  successBg: 'rgba(245, 158, 11, 0.12)',
+  danger: '#ef4444',
+  white: '#fafafa',
+  inverse: '#0a0a0a', // text on accent buttons
 } as const;
 
 export const OBFonts = {
-  serif: 'Georgia',         // Playfair Display fallback
-  sans: undefined,          // System sans (DM Sans fallback)
+  serif: 'Georgia',
+  sans: undefined,
 } as const;
