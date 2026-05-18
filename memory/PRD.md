@@ -1,4 +1,4 @@
-# Kompas — PRD (Product Requirements Document)
+# Junie — PRD (Product Requirements Document)
 
 ## Oorspronkelijk Probleemstatement
 Bouw een health chat app genaamd "Kompas" (genre Noah AI) in Belgisch Nederlands met een premium feel.
@@ -21,6 +21,7 @@ De app gebruikt Claude Sonnet via Emergent Universal Key.
 - ✅ Geheugen-toggle toegevoegd in Profiel > Privacy (aan/uit)
 - ⚠️ Stripe checkout flow is technisch live-ready, maar echte betalingen vereisen een geldige Stripe API key en (optioneel) price IDs
 - ✅ Community launch-scope toegevoegd: anonieme mini-feed met auto/custom nickname, premium-gated posten en premium-gated DM routes
+- ✅ Communitykanaal-counters gebruiken nu echte backenddata (posts + laatste activiteit), geen fake labels
 
 ## Gebruikerspersona
 - Primair: Vlaamse/Belgische volwassenen die mentaal welzijn ondersteuning zoeken

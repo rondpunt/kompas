@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { OB } from './ob-theme';
 import { api } from '@/src/api/client';
+import { APP_NAME } from '@/src/config/branding';
 
 interface Props {
   intentions: string[];
@@ -86,10 +87,10 @@ export function FirstConversationStep({ intentions, mood, onComplete, onSkip }: 
     <SafeAreaView style={s.root}>
       <View style={s.header}>
         <View style={s.aiAvatar}>
-          <Text style={s.avatarLetter}>K</Text>
+          <Text style={s.avatarLetter}>{APP_NAME.slice(0, 1)}</Text>
         </View>
         <View>
-          <Text style={s.headerTitle}>Kompas</Text>
+          <Text style={s.headerTitle}>{APP_NAME}</Text>
           <Text style={s.headerSub}>Luistert, vraagt door</Text>
         </View>
         <TouchableOpacity testID="onboarding-conversation-skip" style={s.skipBtn} onPress={onSkip}>
@@ -154,7 +155,7 @@ export function FirstConversationStep({ intentions, mood, onComplete, onSkip }: 
               <Text style={s.ctaSecText}>Gesprek bewaren</Text>
             </TouchableOpacity>
             <TouchableOpacity testID="onboarding-conversation-continue" style={s.ctaPrimary} onPress={() => onComplete(conversationId)}>
-              <Text style={s.ctaPriText}>Bekijk wat Kompas biedt →</Text>
+              <Text style={s.ctaPriText}>Bekijk wat {APP_NAME} biedt →</Text>
             </TouchableOpacity>
           </Animated.View>
         )}

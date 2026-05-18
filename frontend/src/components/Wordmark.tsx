@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { useTheme } from "@/src/theme/ThemeContext";
+import { APP_NAME } from "@/src/config/branding";
 
 interface Props {
   size?: number; // base font size
@@ -30,7 +31,7 @@ export function Wordmark({ size = 15, testID }: Props) {
           letterSpacing: -0.3,
         }}
       >
-        Kompas
+        {APP_NAME}
       </Text>
     </View>
   );

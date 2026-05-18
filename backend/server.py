@@ -1817,6 +1817,31 @@ async def get_community_feed(limit: int = 40, channel: Optional[str] = None):
     return docs
 
 
+@api_router.get("/community/stats")
+async def get_community_stats():
+    pipeline = [
+        {
+            "$group": {
+                "_id": "$channel",
+                "posts_count": {"$sum": 1},
+                "last_post_at": {"$max": "$created_at"},
+            }
+        }
+    ]
+    rows = await db.community_posts.aggregate(pipeline).to_list(100)
+    channels: Dict[str, Dict[str, Any]] = {}
+    total = 0
+    for r in rows:
+        channel = str(r.get("_id") or "algemeen")
+        count = int(r.get("posts_count") or 0)
+        total += count
+        channels[channel] = {
+            "posts_count": count,
+            "last_post_at": r.get("last_post_at"),
+        }
+    return {"channels": channels, "total_posts": total}
+
+
 @api_router.post("/community/posts")
 async def create_community_post(body: CommunityPostCreateRequest, request: Request):
     user = await get_current_user(request)

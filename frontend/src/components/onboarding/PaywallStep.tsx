@@ -8,6 +8,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { Feather } from '@expo/vector-icons';
 import { OB, OBFonts } from './ob-theme';
 import { api } from '@/src/api/client';
+import { APP_NAME, APP_PLUS_NAME } from '@/src/config/branding';
 
 interface Props {
   userId: string | null;
@@ -56,7 +57,7 @@ export function PaywallStep({ userId, onTrialStarted, onSkip }: Props) {
     <SafeAreaView style={s.root}>
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <Text style={s.headline}>Probeer Kompas Plus{`\n`}14 dagen gratis</Text>
+        <Text style={s.headline}>Probeer {APP_PLUS_NAME}{`\n`}14 dagen gratis</Text>
         <Text style={s.subtext}>Geen betaling vandaag. Annuleer op elk moment.</Text>
 
         {/* Features */}
@@ -114,9 +115,7 @@ export function PaywallStep({ userId, onTrialStarted, onSkip }: Props) {
 
         {/* Social proof */}
         <View style={s.socialProof}>
-          <Text style={s.testimonial}>
-            “Kompas helpt me om mijn gedachten te ordenen tussen therapie-sessies door.”
-          </Text>
+          <Text style={s.testimonial}>{`“${APP_NAME} helpt me om mijn gedachten te ordenen tussen therapie-sessies door.”`}</Text>
           <Text style={s.testimonialName}>— Sarah, 34, Gent</Text>
           <Text style={s.rating}>★★★★★ 4.8 gemiddeld (127 beoordelingen)</Text>
         </View>

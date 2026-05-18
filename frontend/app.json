@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "frontend",
-    "slug": "frontend",
+    "name": "Junie",
+    "slug": "junie",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "frontend",
+    "scheme": "junie",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {

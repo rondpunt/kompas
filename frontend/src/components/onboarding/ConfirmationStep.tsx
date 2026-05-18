@@ -5,6 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { OB } from './ob-theme';
+import { APP_NAME } from '@/src/config/branding';
 
 interface Props {
   trialEndsAt: string | null;
@@ -80,7 +81,7 @@ export function ConfirmationStep({ trialEndsAt, onChat, onTests, onSettings, onD
 
       <View style={s.ctaWrap}>
         <TouchableOpacity style={s.ctaBtn} onPress={onDone} activeOpacity={0.85}>
-          <Text style={s.ctaText}>Begin met Kompas</Text>
+          <Text style={s.ctaText}>Begin met {APP_NAME}</Text>
           <Feather name="arrow-right" size={17} color={OB.white} />
         </TouchableOpacity>
       </View>

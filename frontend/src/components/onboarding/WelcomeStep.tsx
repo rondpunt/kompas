@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { OB, OBFonts } from './ob-theme';
+import { APP_NAME } from '@/src/config/branding';
 
 interface Props {
   onNext: () => void;
@@ -33,11 +34,11 @@ export function WelcomeStep({ onNext }: Props) {
             <View style={s.logoCircle}>
               <Feather name="compass" size={22} color={OB.accent} />
             </View>
-            <Text style={s.logoText}>Kompas</Text>
+            <Text style={s.logoText}>{APP_NAME}</Text>
           </View>
 
           {/* Headline */}
-          <Text style={s.headline}>Welkom bij{`\n`}Kompas</Text>
+          <Text style={s.headline}>Welkom bij{`\n`}{APP_NAME}</Text>
 
           {/* Body */}
           <Text style={s.body}>

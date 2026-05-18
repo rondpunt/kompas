@@ -20,8 +20,6 @@ interface Channel {
   id: string;
   label: string;
   hint: string;
-  members: string;
-  sampleActivity: string;
   iconLib: "Feather" | "MaterialCommunityIcons";
   iconName: string;
   bgNight: string;
@@ -29,14 +27,14 @@ interface Channel {
 }
 
 const CHANNELS: Channel[] = [
-  { id: "adhd", label: "ADHD", hint: "Concentratie, prikkels, ritme", members: "1.2k", sampleActivity: "36 nieuwe posts vandaag", iconLib: "Feather", iconName: "zap", bgNight: "#581c87", fgNight: "#d8b4fe" },
-  { id: "autisme", label: "Autisme", hint: "Patronen, sociaal, prikkels", members: "890", sampleActivity: "22 nieuwe posts vandaag", iconLib: "Feather", iconName: "layers", bgNight: "#134e4a", fgNight: "#5eead4" },
-  { id: "burnout", label: "Burn-out", hint: "Werk, herstellen, grenzen", members: "1.5k", sampleActivity: "41 nieuwe posts vandaag", iconLib: "Feather", iconName: "battery", bgNight: "#7c2d12", fgNight: "#fdba74" },
-  { id: "depressie", label: "Depressie", hint: "Donkere periodes, motivatie", members: "2.1k", sampleActivity: "57 nieuwe posts vandaag", iconLib: "Feather", iconName: "cloud-rain", bgNight: "#451a03", fgNight: "#fcd34d" },
-  { id: "angst", label: "Angst", hint: "Piekeren, paniek, ademen", members: "1.8k", sampleActivity: "49 nieuwe posts vandaag", iconLib: "Feather", iconName: "wind", bgNight: "#1e3a8a", fgNight: "#93c5fd" },
-  { id: "hsp", label: "Hooggevoelig", hint: "Prikkels, energie, rust", members: "640", sampleActivity: "17 nieuwe posts vandaag", iconLib: "Feather", iconName: "feather", bgNight: "#831843", fgNight: "#f9a8d4" },
-  { id: "verlies", label: "Verlies", hint: "Rouw, gemis, herinneren", members: "720", sampleActivity: "14 nieuwe posts vandaag", iconLib: "MaterialCommunityIcons", iconName: "weather-cloudy", bgNight: "#1f2937", fgNight: "#d1d5db" },
-  { id: "relaties", label: "Relaties", hint: "Partner, ouders, vrienden", members: "1.0k", sampleActivity: "29 nieuwe posts vandaag", iconLib: "Feather", iconName: "users", bgNight: "#1e40af", fgNight: "#bfdbfe" },
+  { id: "adhd", label: "ADHD", hint: "Concentratie, prikkels, ritme", iconLib: "Feather", iconName: "zap", bgNight: "#581c87", fgNight: "#d8b4fe" },
+  { id: "autisme", label: "Autisme", hint: "Patronen, sociaal, prikkels", iconLib: "Feather", iconName: "layers", bgNight: "#134e4a", fgNight: "#5eead4" },
+  { id: "burnout", label: "Burn-out", hint: "Werk, herstellen, grenzen", iconLib: "Feather", iconName: "battery", bgNight: "#7c2d12", fgNight: "#fdba74" },
+  { id: "depressie", label: "Depressie", hint: "Donkere periodes, motivatie", iconLib: "Feather", iconName: "cloud-rain", bgNight: "#451a03", fgNight: "#fcd34d" },
+  { id: "angst", label: "Angst", hint: "Piekeren, paniek, ademen", iconLib: "Feather", iconName: "wind", bgNight: "#1e3a8a", fgNight: "#93c5fd" },
+  { id: "hsp", label: "Hooggevoelig", hint: "Prikkels, energie, rust", iconLib: "Feather", iconName: "feather", bgNight: "#831843", fgNight: "#f9a8d4" },
+  { id: "verlies", label: "Verlies", hint: "Rouw, gemis, herinneren", iconLib: "MaterialCommunityIcons", iconName: "weather-cloudy", bgNight: "#1f2937", fgNight: "#d1d5db" },
+  { id: "relaties", label: "Relaties", hint: "Partner, ouders, vrienden", iconLib: "Feather", iconName: "users", bgNight: "#1e40af", fgNight: "#bfdbfe" },
 ];
 
 const FILTERS = [{ id: "all", label: "Alles" }, ...CHANNELS.map((c) => ({ id: c.id, label: c.label }))] as const;
@@ -64,17 +62,20 @@ export default function Community() {
   const [nicknameDraft, setNicknameDraft] = useState("");
   const [savingNick, setSavingNick] = useState(false);
   const [errorText, setErrorText] = useState<string | null>(null);
+  const [channelStats, setChannelStats] = useState<Record<string, { posts_count: number; last_post_at?: string }>>({});
 
   const load = useCallback(async () => {
     setErrorText(null);
     try {
-      const [meRes, feedRes] = await Promise.all([
+      const [meRes, feedRes, statsRes] = await Promise.all([
         communityApi.me(),
         communityApi.feed(activeFilter === "all" ? "all" : activeFilter),
+        communityApi.stats(),
       ]);
       setMe(meRes);
       setNicknameDraft(meRes.nickname ?? "");
       setPosts(feedRes);
+      setChannelStats(statsRes.channels ?? {});
     } catch (e: any) {
       setErrorText(e?.message ?? "community laden mislukt");
     } finally {
@@ -119,6 +120,8 @@ export default function Community() {
         channel: activeFilter === "all" ? "algemeen" : activeFilter,
       });
       setPosts((prev) => [created, ...prev]);
+      const stats = await communityApi.stats();
+      setChannelStats(stats.channels ?? {});
       setPostDraft("");
     } catch (e: any) {
       setErrorText(e?.message ?? "posten mislukt");
@@ -244,7 +247,7 @@ export default function Community() {
         ) : (
           <View style={[styles.lockedCard, { backgroundColor: palette.surfaceElevated, borderColor: palette.borderSubtle }]}>
             <Text style={[styles.lockedTitle, { color: palette.textPrimary }]}>Free = read-only</Text>
-            <Text style={[styles.lockedBody, { color: palette.textSecondary }]}>Met Kompas Plus kan je posten en direct contact leggen via DM.</Text>
+            <Text style={[styles.lockedBody, { color: palette.textSecondary }]}>Met Junie Plus kan je posten en direct contact leggen via DM.</Text>
             <TouchableOpacity testID="community-upsell-posting" onPress={() => setShowPlus(true)} style={[styles.lockedBtn, { borderColor: palette.borderDefault }]}>
               <Text style={[styles.lockedBtnText, { color: palette.textPrimary }]}>Ontgrendel posten + DM</Text>
             </TouchableOpacity>
@@ -306,9 +309,13 @@ export default function Community() {
                   {c.hint}
                 </Text>
                 <View style={styles.cardMetaRow}>
-                  <Text style={[styles.cardMetaText, { color: palette.textFaint }]}>{c.members} leden</Text>
+                  <Text style={[styles.cardMetaText, { color: palette.textFaint }]}>
+                    {(channelStats[c.id]?.posts_count ?? 0)} posts
+                  </Text>
                   <View style={[styles.dot, { backgroundColor: palette.textFaint }]} />
-                  <Text style={[styles.cardMetaText, { color: palette.textFaint }]}>{c.sampleActivity}</Text>
+                  <Text style={[styles.cardMetaText, { color: palette.textFaint }]}>
+                    {channelStats[c.id]?.last_post_at ? `laatste ${relTime(channelStats[c.id]?.last_post_at)}` : "nog geen activiteit"}
+                  </Text>
                 </View>
               </View>
               <Feather name="chevron-right" size={16} color={palette.textMuted} />
@@ -360,7 +367,7 @@ export default function Community() {
           </View>
           <View style={styles.ruleRow}>
             <Feather name="check" size={14} color={palette.accent} />
-            <Text style={[styles.ruleText, { color: palette.textSecondary }]}>Kompas moderatie houdt het veilig en kalm</Text>
+            <Text style={[styles.ruleText, { color: palette.textSecondary }]}>Junie moderatie houdt het veilig en kalm</Text>
           </View>
           <TouchableOpacity testID="community-guidelines-cta" onPress={() => setShowPlus(true)} style={[styles.rulesCta, { borderColor: palette.borderDefault }]}> 
             <Text style={[styles.rulesCtaText, { color: palette.textPrimary }]}>Bekijk voorbeeldthread</Text>

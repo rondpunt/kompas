@@ -24,6 +24,7 @@ import { PlusHintBanner } from "@/src/components/PlusHintBanner";
 import { PlusModal } from "@/src/components/PlusModal";
 import { api, ApiMessage, ChatResponse } from "@/src/api/client";
 import { profileApi } from "@/src/api/profile";
+import { APP_NAME } from "@/src/config/branding";
 import { hasOnboarded } from "./onboarding";
 import { bumpMessageCount, dismissPlusHint, getUsage, UsageSnapshot } from "@/src/utils/usage";
 import { storage } from "@/src/utils/storage";
@@ -476,7 +477,7 @@ export default function ChatScreen() {
                 // Kill the default web focus outline (white square)
                 Platform.OS === "web" ? ({ outlineStyle: "none", outline: "none" } as any) : null,
               ]}
-              placeholder="Bericht Kompas"
+              placeholder={`Bericht ${APP_NAME}`}
               placeholderTextColor={palette.textMuted}
               value={draft}
               onChangeText={setDraft}

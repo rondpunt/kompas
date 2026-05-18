@@ -5,6 +5,7 @@
 - [x] Stripe checkout ondersteunt zowel Price IDs als dynamische recurring line items
 - [ ] Geldige Stripe API key in omgeving zetten (huidige `sk_test_emergent` is ongeldig)
 - [ ] Optioneel: definitieve Price IDs (`STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_ANNUAL`) instellen voor productiebeheer
+- [~] Rebranding naar **Junie** gestart (kern user-facing flows deels omgezet, resterende schermen volgen)
 
 ## P1 — Hoge prioriteit
 - [~] RAG memory across sessions (memory UI toggle + backend gating klaar; vector embeddings nog open)

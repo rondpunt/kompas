@@ -33,6 +33,11 @@ export interface CommunityDM {
   created_at: string;
 }
 
+export interface CommunityStatsResponse {
+  channels: Record<string, { posts_count: number; last_post_at?: string }>;
+  total_posts: number;
+}
+
 export const communityApi = {
   me: () => request<CommunityMe>("/community/me"),
   setNickname: (nickname: string) =>
@@ -41,6 +46,7 @@ export const communityApi = {
       body: JSON.stringify({ nickname }),
     }),
   feed: (channel = "all") => request<CommunityPost[]>(`/community/feed?channel=${encodeURIComponent(channel)}`),
+  stats: () => request<CommunityStatsResponse>("/community/stats"),
   createPost: (payload: { content: string; channel: string }) =>
     request<CommunityPost>("/community/posts", {
       method: "POST",

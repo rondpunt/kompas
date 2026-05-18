@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTheme } from "@/src/theme/ThemeContext";
+import { APP_NAME, APP_PLUS_NAME } from "@/src/config/branding";
 
 export type PlusReason = "pdf" | "memory" | "community" | "voice" | "generic";
 
@@ -38,15 +39,15 @@ const COPY: Record<PlusReason, Copy> = {
     bullets: [
       "Score + AI-uitleg in één pagina",
       "Geen e-mail of naam vereist",
-      "Inbegrepen in Kompas Plus",
+      `Inbegrepen in ${APP_PLUS_NAME}`,
     ],
     cta: "Houd me op de hoogte",
   },
   memory: {
     eyebrow: "PLUS · Geheugen",
-    title: "Kompas onthoudt wat speelt",
+    title: `${APP_NAME} onthoudt wat speelt`,
     body:
-      "Geen herhaling van context. Kompas weet wat er vorige week aan de hand was zonder dat je 't opnieuw moet uitleggen.",
+      `Geen herhaling van context. ${APP_NAME} weet wat er vorige week aan de hand was zonder dat je 't opnieuw moet uitleggen.`,
     bullets: [
       "Geheugen over al je gesprekken",
       "Jij beheert wat onthouden wordt",
@@ -70,13 +71,13 @@ const COPY: Record<PlusReason, Copy> = {
     eyebrow: "PLUS · Spraak",
     title: "Praat ipv typen",
     body:
-      "Hands-free chat met Kompas — handig in de auto of als typen te veel is. Antwoorden komen via tekst, je hoeft niet te luisteren.",
+      `Hands-free chat met ${APP_NAME} — handig in de auto of als typen te veel is. Antwoorden komen via tekst, je hoeft niet te luisteren.`,
     bullets: ["Vlaamse spraakherkenning", "Pauzes als je nodig hebt", "Plus-feature"],
     cta: "Houd me op de hoogte",
   },
   generic: {
-    eyebrow: "KOMPAS PLUS",
-    title: "Iets meer Kompas",
+    eyebrow: `${APP_PLUS_NAME.toUpperCase()}`,
+    title: `Iets meer ${APP_NAME}`,
     body:
       "Geheugen tussen gesprekken, een anonieme gemeenschap, PDF-export, en méér ruimte om te praten.",
     bullets: [
@@ -135,7 +136,7 @@ export function PlusModal({ visible, reason = "generic", onClose, onNotify, test
           </View>
 
           <View style={[styles.priceBox, { borderColor: palette.borderSubtle }]}>
-            <Text style={[styles.priceLabel, { color: palette.textMuted }]}>Kompas Plus</Text>
+            <Text style={[styles.priceLabel, { color: palette.textMuted }]}>{APP_PLUS_NAME}</Text>
             <View style={styles.priceRow}>
               <Text style={[styles.priceAmount, { color: palette.textPrimary }]}>€4,99</Text>
               <Text style={[styles.priceUnit, { color: palette.textMuted }]}>/ maand</Text>

@@ -96,3 +96,14 @@
 
 ### Bekende beperking
 - Kanaal-leden/activiteit labels in community UI zijn momenteel **MOCKED** designdata (statisch), geen live aggregatie.
+
+## 2026-05-18 — Community data echt + rebranding start naar Junie
+
+### Gebouwd
+- Communitycards tonen nu **echte data** uit backend via `GET /api/community/stats` (post-aantallen + laatste activiteit per kanaal).
+- Static/fake community-activiteitslabels verwijderd uit user-facing UI.
+- Rebranding gestart: nieuwe branding config (`APP_NAME=Junie`, `APP_PLUS_NAME=Junie Plus`) en zichtbaar op onboarding/community/chat input/plusmodal.
+- App metadata aangepast in `app.json` (`name`, `slug`, `scheme` naar Junie).
+
+### Open (bewust voor later)
+- Beheer/moderatie-console niet uitgewerkt in deze launch-sprint; blijft open als vervolgwerk.
