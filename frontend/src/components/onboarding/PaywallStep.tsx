@@ -1,185 +1,199 @@
-import React, { useState } from 'react';
+import React, { useRef, useEffect } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform,
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Animated,
+  Platform,
+  ScrollView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import * as WebBrowser from 'expo-web-browser';
-import { Feather } from '@expo/vector-icons';
-import { OB, OBFonts } from './ob-theme';
-import { api } from '@/src/api/client';
-import { APP_NAME, APP_PLUS_NAME } from '@/src/config/branding';
+import { OB } from './ob-theme';
+
+const PLANS = [
+  {
+    id: 'maand',
+    label: 'Maandelijks',
+    price: '€9,99',
+    period: '/maand',
+    badge: null,
+    accent: OB.blauw,
+  },
+  {
+    id: 'jaar',
+    label: 'Jaarlijks',
+    price: '€5,99',
+    period: '/maand',
+    badge: 'BESTE DEAL',
+    accent: OB.groen,
+  },
+];
+
+const FEATURES = [
+  { icon: '💬', label: 'Onbeperkt chatten', color: OB.blauw },
+  { icon: '📊', label: 'Alle zelftesten', color: OB.groen },
+  { icon: '🏘️', label: 'Community toegang', color: OB.geel },
+  { icon: '📈', label: 'Persoonlijk dashboard', color: OB.oranje },
+  { icon: '🔒', label: '100% privé & veilig', color: OB.koraal },
+];
 
 interface Props {
-  userId: string | null;
-  onTrialStarted: (endsAt: string) => void;
+  onSelect: (planId: string) => void;
   onSkip: () => void;
 }
 
-const FEATURES = [
-  'Onbeperkte gesprekken',
-  'Cross-session geheugen',
-  'Community: posten + DM',
-  'PDF-export voor therapeut',
-];
+export default function PaywallStep({ onSelect, onSkip }: Props) {
+  const fadeIn = useRef(new Animated.Value(0)).current;
+  const slideUp = useRef(new Animated.Value(30)).current;
+  const [selected, setSelected] = React.useState('jaar');
 
-export function PaywallStep({ userId, onTrialStarted, onSkip }: Props) {
-  const [plan, setPlan] = useState<'monthly' | 'annual'>('annual');
-  const [loading, setLoading] = useState(false);
-
-  const trialEnd = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
-  const trialEndStr = trialEnd.toLocaleDateString('nl-BE', { day: 'numeric', month: 'long' });
-
-  const startTrial = async () => {
-    setLoading(true);
-    try {
-      const data = await api.createStripeCheckoutSession({ plan, user_id: userId ?? 'anonymous' });
-      if (data.checkoutUrl) {
-        await WebBrowser.openBrowserAsync(data.checkoutUrl);
-      }
-    } catch {
-      // graceful fallback
-    }
-    onTrialStarted(trialEnd.toISOString());
-    setLoading(false);
-  };
-
-  const price = plan === 'monthly' ? '12,99' : '119,99';
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeIn, { toValue: 1, duration: 500, useNativeDriver: true }),
+      Animated.timing(slideUp, { toValue: 0, duration: 500, useNativeDriver: true }),
+    ]).start();
+  }, []);
 
   return (
-    <SafeAreaView style={s.root}>
-      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-        <View style={s.plusBadge}>
-          <Feather name="zap" size={11} color={OB.inverse} />
-          <Text style={s.plusBadgeText}>{APP_PLUS_NAME.toUpperCase()}</Text>
+    <Animated.View style={[styles.root, { opacity: fadeIn, transform: [{ translateY: slideUp }] }]}>
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.crown}>✨</Text>
+          <Text style={styles.title}>Junie Plus</Text>
+          <Text style={styles.subtitle}>
+            Alles wat je nodig hebt voor jouw{'
+'}mentale welzijn, op één plek.
+          </Text>
         </View>
 
-        <Text style={s.headline}>14 dagen gratis proberen</Text>
-        <Text style={s.subtext}>Geen betaling vandaag. Annuleer wanneer je wil.</Text>
-
-        <View style={s.featuresCard}>
-          {FEATURES.map((f) => (
-            <View key={f} style={s.featureRow}>
-              <View style={s.checkDot}>
-                <Feather name="check" size={11} color={OB.inverse} />
+        {/* Features */}
+        <View style={styles.features}>
+          {FEATURES.map((f, i) => (
+            <View key={i} style={styles.featureRow}>
+              <View style={[styles.featureIcon, { backgroundColor: f.color + '22' }]}>
+                <Text style={styles.featureEmoji}>{f.icon}</Text>
               </View>
-              <Text style={s.featureText}>{f}</Text>
+              <Text style={styles.featureLabel}>{f.label}</Text>
+              <Text style={[styles.check, { color: OB.groen }]}>✓</Text>
             </View>
           ))}
         </View>
 
-        <View style={s.planRow}>
-          <TouchableOpacity
-            testID="paywall-plan-monthly"
-            style={[s.planCard, plan === 'monthly' && s.planCardSelected]}
-            onPress={() => setPlan('monthly')}
-            activeOpacity={0.8}
-          >
-            <Text style={[s.planLabel, plan === 'monthly' && s.planLabelSel]}>Maandelijks</Text>
-            <Text style={[s.planPrice, plan === 'monthly' && s.planPriceSel]}>€12,99</Text>
-            <Text style={s.planUnit}>/maand</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            testID="paywall-plan-annual"
-            style={[s.planCard, plan === 'annual' && s.planCardSelected]}
-            onPress={() => setPlan('annual')}
-            activeOpacity={0.8}
-          >
-            <View style={s.bestBadge}><Text style={s.bestText}>BESPAAR €36</Text></View>
-            <Text style={[s.planLabel, plan === 'annual' && s.planLabelSel]}>Jaarlijks</Text>
-            <Text style={[s.planPrice, plan === 'annual' && s.planPriceSel]}>€119,99</Text>
-            <Text style={s.planUnit}>€10/maand</Text>
-          </TouchableOpacity>
+        {/* Plans */}
+        <View style={styles.plans}>
+          {PLANS.map((plan) => {
+            const active = selected === plan.id;
+            return (
+              <TouchableOpacity
+                key={plan.id}
+                style={[
+                  styles.planCard,
+                  active && { borderColor: plan.accent, backgroundColor: plan.accent + '10' },
+                ]}
+                onPress={() => setSelected(plan.id)}
+                activeOpacity={0.8}
+              >
+                {plan.badge && (
+                  <View style={[styles.badge, { backgroundColor: plan.accent }]}>
+                    <Text style={styles.badgeText}>{plan.badge}</Text>
+                  </View>
+                )}
+                <Text style={[styles.planLabel, active && { color: plan.accent }]}>{plan.label}</Text>
+                <View style={styles.priceRow}>
+                  <Text style={[styles.price, active && { color: plan.accent }]}>{plan.price}</Text>
+                  <Text style={styles.period}>{plan.period}</Text>
+                </View>
+                {active && (
+                  <View style={[styles.activeDot, { backgroundColor: plan.accent }]} />
+                )}
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
-        <View style={s.timelineRow}>
-          <Feather name="calendar" size={13} color={OB.accent} />
-          <Text style={s.timelineText}>
-            Eerste betaling op <Text style={{ color: OB.textPrimary, fontWeight: '600' }}>{trialEndStr}</Text> — herinnering 1 dag ervoor.
-          </Text>
-        </View>
-
-        <Text style={s.legal}>{APP_NAME} vervangt geen therapie. Anoniem starten kan ook gratis.</Text>
-      </ScrollView>
-
-      <View style={s.ctaWrap}>
+        {/* CTA */}
         <TouchableOpacity
-          testID="paywall-start-trial"
-          style={[s.cta, loading && { opacity: 0.7 }]}
-          onPress={startTrial}
-          disabled={loading}
+          style={[styles.cta, { backgroundColor: OB.blauw }]}
+          onPress={() => onSelect(selected)}
           activeOpacity={0.85}
         >
-          <Text style={s.ctaText}>{loading ? 'Bezig…' : 'Start gratis trial'}</Text>
-          <Feather name="arrow-right" size={16} color={OB.inverse} />
+          <Text style={styles.ctaText}>Start gratis proefperiode</Text>
         </TouchableOpacity>
-        <TouchableOpacity testID="paywall-skip" style={s.skipBtn} onPress={onSkip}>
-          <Text style={s.skipText}>Liever zonder Plus</Text>
+
+        <Text style={styles.trial}>7 dagen gratis · Daarna {selected === 'jaar' ? '€71,88/jaar' : '€9,99/maand'} · Altijd opzegbaar</Text>
+
+        <TouchableOpacity onPress={onSkip} style={styles.skipBtn}>
+          <Text style={styles.skipText}>Misschien later</Text>
         </TouchableOpacity>
-      </View>
-    </SafeAreaView>
+
+        <Text style={styles.legal}>
+          Door te abonneren ga je akkoord met onze{' '}
+          <Text style={styles.legalLink}>gebruiksvoorwaarden</Text> en{' '}
+          <Text style={styles.legalLink}>privacybeleid</Text>.
+        </Text>
+      </ScrollView>
+    </Animated.View>
   );
 }
 
-const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: OB.bg },
-  scroll: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 10 },
-  plusBadge: {
-    alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: OB.accent, paddingHorizontal: 8, paddingVertical: 4,
-    borderRadius: 999, marginBottom: 14,
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: OB.achtergrond },
+  scroll: { paddingHorizontal: 24, paddingTop: 48, paddingBottom: 40 },
+  header: { alignItems: 'center', marginBottom: 32 },
+  crown: { fontSize: 40, marginBottom: 8 },
+  title: { fontSize: 30, fontFamily: OB.fontBrand, fontWeight: '800', color: OB.tekst, marginBottom: 8 },
+  subtitle: { fontSize: 15, color: OB.subtekst, textAlign: 'center', lineHeight: 22, fontFamily: OB.fontUI },
+  features: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 24,
+    ...Platform.select({ ios: { shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } }, android: { elevation: 2 } }),
   },
-  plusBadgeText: { color: OB.inverse, fontSize: 10.5, fontWeight: '700', letterSpacing: 0.4 },
-  headline: {
-    fontSize: 26, fontWeight: '500', lineHeight: 32, color: OB.textPrimary,
-    fontStyle: 'italic',
-    fontFamily: Platform.select({ ios: OBFonts.serif, android: 'serif' }),
-    marginBottom: 6, letterSpacing: -0.3,
-  },
-  subtext: { fontSize: 14, color: OB.textMuted, marginBottom: 18 },
-  featuresCard: {
-    backgroundColor: OB.surface, borderRadius: 14, padding: 14,
-    gap: 10, marginBottom: 16, borderWidth: 0.5, borderColor: OB.border,
-  },
-  featureRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  checkDot: {
-    width: 18, height: 18, borderRadius: 9,
-    backgroundColor: OB.accent, alignItems: 'center', justifyContent: 'center',
-  },
-  featureText: { fontSize: 13.5, color: OB.textSecondary, flex: 1, lineHeight: 19 },
-  planRow: { flexDirection: 'row', gap: 10, marginBottom: 14 },
+  featureRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  featureIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  featureEmoji: { fontSize: 16 },
+  featureLabel: { flex: 1, fontSize: 14, color: OB.tekst, fontFamily: OB.fontUI },
+  check: { fontSize: 16, fontWeight: '700' },
+  plans: { flexDirection: 'row', gap: 12, marginBottom: 24 },
   planCard: {
-    flex: 1, backgroundColor: OB.surface, borderRadius: 14, padding: 14,
-    borderWidth: 1.5, borderColor: OB.border, position: 'relative',
+    flex: 1,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#E8ECF0',
+    padding: 16,
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    position: 'relative',
+    minHeight: 100,
+    justifyContent: 'center',
   },
-  planCardSelected: { borderColor: OB.accent, backgroundColor: OB.accentSoft },
-  planLabel: { fontSize: 12, color: OB.textMuted, fontWeight: '500', marginBottom: 6 },
-  planLabelSel: { color: OB.textPrimary },
-  planPrice: { fontSize: 22, fontWeight: '700', color: OB.textSecondary, letterSpacing: -0.5 },
-  planPriceSel: { color: OB.textPrimary },
-  planUnit: { fontSize: 11.5, color: OB.textMuted, marginTop: 2 },
-  bestBadge: {
-    position: 'absolute', top: -8, right: 8,
-    backgroundColor: OB.accent, borderRadius: 999, paddingHorizontal: 7, paddingVertical: 2,
+  badge: {
+    position: 'absolute',
+    top: -10,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 20,
   },
-  bestText: { color: OB.inverse, fontSize: 9, fontWeight: '700', letterSpacing: 0.4 },
-  timelineRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingVertical: 10, paddingHorizontal: 12,
-    backgroundColor: OB.surface, borderRadius: 10,
-    borderWidth: 0.5, borderColor: OB.border, marginBottom: 12,
-  },
-  timelineText: { fontSize: 12.5, color: OB.textMuted, flex: 1, lineHeight: 17 },
-  legal: { textAlign: 'center', fontSize: 11, color: OB.textFaint, marginBottom: 6 },
-  ctaWrap: { paddingHorizontal: 20, paddingBottom: 16, paddingTop: 6, backgroundColor: OB.bg },
+  badgeText: { fontSize: 10, fontWeight: '700', color: '#fff', letterSpacing: 0.5, fontFamily: OB.fontUI },
+  planLabel: { fontSize: 13, color: OB.subtekst, fontFamily: OB.fontUI, marginBottom: 4 },
+  priceRow: { flexDirection: 'row', alignItems: 'flex-end' },
+  price: { fontSize: 22, fontWeight: '800', color: OB.tekst, fontFamily: OB.fontBrand },
+  period: { fontSize: 12, color: OB.subtekst, marginLeft: 2, marginBottom: 2, fontFamily: OB.fontUI },
+  activeDot: { width: 6, height: 6, borderRadius: 3, marginTop: 8 },
   cta: {
-    height: 52, borderRadius: 14, backgroundColor: OB.accent,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    ...Platform.select({
-      ios: { shadowColor: OB.accent, shadowOpacity: 0.4, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } },
-      android: { elevation: 4 },
-    }),
+    borderRadius: 14,
+    height: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+    ...Platform.select({ ios: { shadowColor: OB.blauw, shadowOpacity: 0.35, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } }, android: { elevation: 4 } }),
   },
-  ctaText: { fontSize: 15, fontWeight: '700', color: OB.inverse },
-  skipBtn: { alignItems: 'center', paddingVertical: 10 },
-  skipText: { fontSize: 13, color: OB.textMuted },
+  ctaText: { fontSize: 16, fontWeight: '700', color: '#fff', fontFamily: OB.fontBrand },
+  trial: { textAlign: 'center', fontSize: 12, color: OB.subtekst, marginBottom: 16, fontFamily: OB.fontUI },
+  skipBtn: { alignItems: 'center', paddingVertical: 12 },
+  skipText: { fontSize: 14, color: OB.subtekst, fontFamily: OB.fontUI },
+  legal: { fontSize: 11, color: OB.subtekst, textAlign: 'center', marginTop: 12, lineHeight: 16, fontFamily: OB.fontUI },
+  legalLink: { color: OB.blauw, textDecorationLine: 'underline' },
 });
