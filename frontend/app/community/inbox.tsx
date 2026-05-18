@@ -1,147 +1,76 @@
-import React, { useCallback, useEffect, useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { Feather } from "@expo/vector-icons";
-import { Stack, useRouter } from "expo-router";
+import React from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter, Stack } from 'expo-router';
+import { useTheme } from '@/src/theme/ThemeContext';
+import { LAYERS } from '@/src/theme/tokens';
 
-import { useTheme } from "@/src/theme/ThemeContext";
-import { communityApi, CommunityMe, CommunityThread } from "@/src/api/community";
-import { PlusModal } from "@/src/components/PlusModal";
+const BLAUW  = '#4A90E2';
+const GROEN  = '#7ED957';
+const KORAAL = '#E85A5A';
 
-function relative(iso?: string) {
-  if (!iso) return "net";
-  const mins = Math.max(1, Math.floor((Date.now() - new Date(iso).getTime()) / 60000));
-  if (mins < 60) return `${mins}m`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}u`;
-  return `${Math.floor(hrs / 24)}d`;
-}
+const MOCK_CHATS = [
+  { id: '1', name: 'Sofie V.', preview: 'Heb je die oefening ook geprobeerd?', time: '14:32', unread: 2, color: BLAUW },
+  { id: '2', name: 'Thomas D.', preview: 'Super fijn gesprek vandaag, dankjewel!', time: '12:10', unread: 0, color: GROEN },
+  { id: '3', name: 'Emma B.', preview: 'Ik snap wat je bedoelt met die grounding...', time: 'Gisteren', unread: 1, color: KORAAL },
+];
 
-export default function CommunityInboxScreen() {
-  const { palette } = useTheme();
+export default function InboxScreen() {
+  const { theme } = useTheme();
+  const colors = theme === 'dark' ? LAYERS.DARK : LAYERS.LIGHT;
   const router = useRouter();
-  const [me, setMe] = useState<CommunityMe | null>(null);
-  const [threads, setThreads] = useState<CommunityThread[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showPlus, setShowPlus] = useState(false);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [meRes, inboxRes] = await Promise.all([communityApi.me(), communityApi.inbox()]);
-      setMe(meRes);
-      setThreads(inboxRes);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [load]);
 
   return (
-    <SafeAreaView style={[styles.root, { backgroundColor: palette.background }]}> 
-      <Stack.Screen options={{ headerShown: false }} />
-
-      <View style={[styles.topBar, { borderBottomColor: palette.borderDefault }]}> 
-        <TouchableOpacity testID="community-inbox-back" onPress={() => router.back()} style={styles.iconBtn}>
-          <Feather name="chevron-left" size={22} color={palette.textPrimary} />
-        </TouchableOpacity>
-        <Text style={[styles.title, { color: palette.textPrimary }]}>Inbox</Text>
-        <View style={styles.iconBtn} />
-      </View>
-
-      {loading ? (
-        <View style={styles.centerBox}>
-          <ActivityIndicator size="small" color={palette.accent} />
-        </View>
-      ) : !me?.can_dm ? (
-        <View style={styles.centerBox}>
-          <Text style={[styles.lockTitle, { color: palette.textPrimary }]}>Inbox is Plus</Text>
-          <Text style={[styles.lockBody, { color: palette.textMuted }]}>Met Plus kan je anoniem contact leggen via DM.</Text>
-          <TouchableOpacity testID="community-inbox-plus-cta" onPress={() => setShowPlus(true)} style={[styles.plusBtn, { backgroundColor: palette.accent }]}> 
-            <Text style={styles.plusBtnText}>Ontgrendel Plus</Text>
-          </TouchableOpacity>
-        </View>
-      ) : !threads.length ? (
-        <View style={styles.centerBox}>
-          <Text style={[styles.emptyTitle, { color: palette.textPrimary }]}>Nog geen gesprekken</Text>
-          <Text style={[styles.emptyBody, { color: palette.textMuted }]}>Open een post in de community en tik op Contact.</Text>
-        </View>
-      ) : (
-        <ScrollView contentContainerStyle={styles.body}>
-          {threads.map((t) => (
-            <TouchableOpacity
-              key={t.peer_nickname}
-              testID={`community-inbox-thread-${t.peer_nickname}`}
-              onPress={() => router.push(`/community/${encodeURIComponent(t.peer_nickname)}` as any)}
-              style={[styles.threadCard, { backgroundColor: palette.surfaceElevated, borderColor: palette.borderSubtle }]}
-            >
-              <View style={styles.threadHead}>
-                <Text style={[styles.peer, { color: palette.textPrimary }]}>@{t.peer_nickname}</Text>
-                <Text style={[styles.meta, { color: palette.textFaint }]}>{relative(t.last_at)}</Text>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]}>
+      <Stack.Screen options={{ title: 'Berichten', headerShown: true }} />
+      <FlatList
+        data={MOCK_CHATS}
+        keyExtractor={i => i.id}
+        contentContainerStyle={styles.list}
+        ItemSeparatorComponent={() => <View style={[styles.sep, { backgroundColor: colors.border }]} />}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            style={[styles.row, { backgroundColor: colors.card }]}
+            onPress={() => router.push('/community/' + item.id)}
+            activeOpacity={0.75}
+          >
+            <View style={[styles.avatar, { backgroundColor: item.color + '20' }]}>
+              <Text style={styles.avatarLetter}>{item.name[0]}</Text>
+            </View>
+            <View style={styles.content}>
+              <View style={styles.topRow}>
+                <Text style={[styles.name, { color: colors.text }]}>{item.name}</Text>
+                <Text style={[styles.time, { color: colors.subtle }]}>{item.time}</Text>
               </View>
-              <Text numberOfLines={1} style={[styles.preview, { color: palette.textSecondary }]}>{t.last_message}</Text>
-              {!!t.unread && (
-                <View style={[styles.unreadChip, { backgroundColor: palette.accent }]}> 
-                  <Text style={styles.unreadText}>{t.unread}</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      )}
-
-      <PlusModal visible={showPlus} reason="community" onClose={() => setShowPlus(false)} />
+              <View style={styles.bottomRow}>
+                <Text style={[styles.preview, { color: colors.subtle }]} numberOfLines={1}>{item.preview}</Text>
+                {item.unread > 0 && (
+                  <View style={[styles.badge, { backgroundColor: BLAUW }]}>
+                    <Text style={styles.badgeText}>{item.unread}</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          </TouchableOpacity>
+        )}
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
-  topBar: {
-    height: 56,
-    borderBottomWidth: 0.5,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  iconBtn: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
-  title: { fontSize: 14.5, fontWeight: "600" },
-  centerBox: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 24 },
-  lockTitle: { fontSize: 20, fontWeight: "600", marginBottom: 8 },
-  lockBody: { fontSize: 13.5, lineHeight: 20, textAlign: "center", marginBottom: 14 },
-  plusBtn: {
-    minHeight: 44,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 18,
-  },
-  plusBtnText: { color: "#ffffff", fontWeight: "700", fontSize: 13 },
-  emptyTitle: { fontSize: 16, fontWeight: "600", marginBottom: 6 },
-  emptyBody: { fontSize: 12.5, textAlign: "center" },
-  body: { padding: 12, gap: 8, paddingBottom: 24 },
-  threadCard: {
-    borderWidth: 0.5,
-    borderRadius: 12,
-    padding: 12,
-    minHeight: 70,
-  },
-  threadHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
-  peer: { fontSize: 13.5, fontWeight: "700" },
-  meta: { fontSize: 11.5 },
-  preview: { fontSize: 12.5 },
-  unreadChip: {
-    alignSelf: "flex-start",
-    marginTop: 8,
-    borderRadius: 999,
-    minWidth: 20,
-    minHeight: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 6,
-  },
-  unreadText: { color: "#ffffff", fontSize: 11.5, fontWeight: "700" },
+  safe: { flex: 1 },
+  list: { padding: 16, gap: 2 },
+  row: { flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 14, marginBottom: 4 },
+  avatar: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginRight: 14 },
+  avatarLetter: { fontSize: 20, fontWeight: '700', color: '#1A1F36' },
+  content: { flex: 1 },
+  topRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
+  name: { fontSize: 15, fontWeight: '600' },
+  time: { fontSize: 12 },
+  bottomRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  preview: { flex: 1, fontSize: 13 },
+  badge: { width: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginLeft: 8 },
+  badgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+  sep: { height: StyleSheet.hairlineWidth },
 });
