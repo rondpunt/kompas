@@ -1,125 +1,96 @@
-import React from 'react';
-import {
-  View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform,
-} from 'react-native';
+import React, { useRef, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Platform, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { OB, OBFonts } from './ob-theme';
-import { useAuth } from '@/src/auth/AuthContext';
+import { OB } from './ob-theme';
 import { APP_NAME } from '@/src/config/branding';
 
-interface Props {
-  onAnonymous: () => void;
-  onAccount: () => void;
-}
+interface Props { onAnonymous: () => void; onAccount: () => void; }
 
 export function PrivacyStep({ onAnonymous, onAccount }: Props) {
-  const { signIn } = useAuth();
-  const [loading, setLoading] = React.useState(false);
-
-  const handleAccount = async () => {
-    setLoading(true);
-    try {
-      await signIn();
-    } finally {
-      setLoading(false);
-    }
-    onAccount();
-  };
+  const fade = useRef(new Animated.Value(0)).current;
+  useEffect(() => { Animated.timing(fade, { toValue: 1, duration: 500, useNativeDriver: true }).start(); }, []);
 
   return (
     <SafeAreaView style={s.root}>
-      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={s.headline}>Hoe wil je verder?</Text>
-        <Text style={s.sub}>{APP_NAME} werkt op beide manieren. Kies wat past.</Text>
+      <Animated.View style={[s.content, { opacity: fade }]}>
+        <View style={s.header}>
+          <View style={s.shieldWrap}><Feather name="shield" size={28} color={OB.green} /></View>
+          <Text style={s.headline}>Hoe wil je starten?</Text>
+          <Text style={s.subtext}>{APP_NAME} werkt volledig anoniem. Een account is optioneel.</Text>
+        </View>
 
-        <TouchableOpacity style={s.card} onPress={onAnonymous} activeOpacity={0.8}>
-          <View style={s.head}>
-            <View style={s.iconBadge}>
-              <Feather name="eye-off" size={18} color={OB.textPrimary} />
+        <View style={s.cards}>
+          <TouchableOpacity style={[s.card, s.cardGreen]} onPress={onAnonymous} activeOpacity={0.85} testID="privacy-anonymous">
+            <View style={s.cardHeader}>
+              <View style={[s.iconCircle, { backgroundColor: OB.green + '20' }]}>
+                <Feather name="user-x" size={18} color={OB.green} />
+              </View>
+              <View>
+                <Text style={s.cardTitle}>Anoniem doorgaan</Text>
+                <Text style={[s.badge, { color: OB.green }]}>Aanbevolen</Text>
+              </View>
             </View>
-            <Text style={s.cardTitle}>Anoniem blijven</Text>
-          </View>
-          <View style={s.bullets}>
-            {[
-              'Gesprekken op dit toestel',
-              'Geen email of account',
-              'Maximale privacy',
-            ].map((b) => (
+            {['Geen account nodig', 'Niets gelinkt aan je identiteit', 'Gesprekken op dit toestel'].map(b => (
               <View key={b} style={s.bullet}>
-                <View style={s.bulletDot} />
+                <Feather name="check" size={13} color={OB.green} />
                 <Text style={s.bulletText}>{b}</Text>
               </View>
             ))}
-          </View>
-          <View style={s.cardCta}>
-            <Text style={s.cardCtaText}>Anoniem verdergaan</Text>
-            <Feather name="arrow-right" size={14} color={OB.textSecondary} />
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={[s.card, s.cardAccent]} onPress={handleAccount} activeOpacity={0.8} disabled={loading}>
-          <View style={s.head}>
-            <View style={[s.iconBadge, s.iconBadgeAccent]}>
-              <Feather name="user" size={18} color={OB.accent} />
+            <View style={s.cardCta}>
+              <Text style={[s.cardCtaText, { color: OB.green }]}>Start anoniem</Text>
+              <Feather name="arrow-right" size={15} color={OB.green} />
             </View>
-            <Text style={[s.cardTitle, { color: OB.accent }]}>Account aanmaken</Text>
-          </View>
-          <View style={s.bullets}>
-            {[
-              'Sync over al je toestellen',
-              'Geheugen tussen gesprekken (Plus)',
-              'PDF-export voor therapeut',
-            ].map((b) => (
+          </TouchableOpacity>
+
+          <TouchableOpacity style={[s.card, s.cardDefault]} onPress={onAccount} activeOpacity={0.85} testID="privacy-account">
+            <View style={s.cardHeader}>
+              <View style={[s.iconCircle, { backgroundColor: OB.accentSoft }]}>
+                <Feather name="user" size={18} color={OB.accent} />
+              </View>
+              <Text style={s.cardTitle}>Account aanmaken</Text>
+            </View>
+            {['Sync tussen toestellen', 'Gesprekken bewaard in de cloud', 'Vereist voor Plus-tier'].map(b => (
               <View key={b} style={s.bullet}>
-                <View style={[s.bulletDot, { backgroundColor: OB.accent }]} />
+                <Feather name="check" size={13} color={OB.accent} />
                 <Text style={s.bulletText}>{b}</Text>
               </View>
             ))}
-          </View>
-          <View style={s.cardCta}>
-            <Text style={[s.cardCtaText, { color: OB.accent }]}>
-              {loading ? 'Bezig…' : 'Aanmelden met Google'}
-            </Text>
-            <Feather name="arrow-right" size={14} color={OB.accent} />
-          </View>
-        </TouchableOpacity>
+            <View style={s.cardCta}>
+              <Text style={[s.cardCtaText, { color: OB.accent }]}>Verder met account</Text>
+              <Feather name="arrow-right" size={15} color={OB.accent} />
+            </View>
+          </TouchableOpacity>
+        </View>
 
-        <Text style={s.footer}>
-          EU-servers. Nooit doorverkocht of gedeeld.
-        </Text>
-      </ScrollView>
+        <Text style={s.legal}>EU-servers · Geen doorverkoop · AVG-conform</Text>
+      </Animated.View>
     </SafeAreaView>
   );
 }
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: OB.bg },
-  scroll: { paddingHorizontal: 20, paddingTop: 24, paddingBottom: 30 },
+  content: { flex: 1, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16 },
+  header: { alignItems: 'center', marginBottom: 24 },
+  shieldWrap: { width: 56, height: 56, borderRadius: 16, backgroundColor: OB.greenSoft, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
   headline: {
-    fontSize: 26, fontWeight: '500', lineHeight: 32,
-    color: OB.textPrimary, marginBottom: 8,
-    fontFamily: Platform.select({ ios: OBFonts.serif, android: 'serif' }),
-    fontStyle: 'italic', letterSpacing: -0.3,
+    fontSize: 24, fontWeight: '700', color: OB.textPrimary, textAlign: 'center', letterSpacing: -0.4, marginBottom: 8,
+    fontFamily: Platform.select({ ios: 'Nunito', android: 'sans-serif', default: 'system-ui' }),
   },
-  sub: { fontSize: 14, color: OB.textMuted, marginBottom: 22 },
-  card: {
-    backgroundColor: OB.surface, borderWidth: 0.5,
-    borderColor: OB.border, borderRadius: 16, padding: 16, marginBottom: 12,
-  },
-  cardAccent: { borderColor: OB.accent + '55' },
-  head: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
-  iconBadge: {
-    width: 36, height: 36, borderRadius: 10,
-    backgroundColor: OB.elevated, alignItems: 'center', justifyContent: 'center',
-  },
-  iconBadgeAccent: { backgroundColor: OB.accentSoft },
-  cardTitle: { fontSize: 16, fontWeight: '600', color: OB.textPrimary },
-  bullets: { gap: 8, marginBottom: 14 },
-  bullet: { flexDirection: 'row', alignItems: 'center', gap: 9 },
-  bulletDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: OB.textMuted },
+  subtext: { fontSize: 14, color: OB.textMuted, textAlign: 'center', lineHeight: 20 },
+  cards: { gap: 12, flex: 1 },
+  card: { borderRadius: 16, padding: 18, gap: 10, borderWidth: 0.5 },
+  cardGreen: { backgroundColor: OB.successBg, borderColor: OB.green + '40',
+    ...Platform.select({ ios: { shadowColor: OB.green, shadowOpacity: 0.12, shadowRadius: 10, shadowOffset: { width: 0, height: 3 } }, android: { elevation: 2 } }) },
+  cardDefault: { backgroundColor: OB.surface, borderColor: OB.border },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 },
+  iconCircle: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  cardTitle: { fontSize: 15, fontWeight: '600', color: OB.textPrimary },
+  badge: { fontSize: 10.5, fontWeight: '700', letterSpacing: 0.3, textTransform: 'uppercase', marginTop: 1 },
+  bullet: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   bulletText: { fontSize: 13.5, color: OB.textSecondary, flex: 1 },
-  cardCta: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  cardCtaText: { fontSize: 13.5, fontWeight: '600', color: OB.textSecondary },
-  footer: { textAlign: 'center', fontSize: 11.5, color: OB.textFaint, marginTop: 8, lineHeight: 17 },
+  cardCta: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
+  cardCtaText: { fontSize: 14, fontWeight: '600' },
+  legal: { textAlign: 'center', fontSize: 10.5, color: OB.textFaint, marginTop: 14 },
 });
