@@ -1,56 +1,49 @@
 import React from "react";
-import { View, StyleSheet, ViewStyle, StyleProp, TouchableOpacity } from "react-native";
-import { LAYERS, BORDER, RADII, shadow } from "@/src/theme/tokens";
+import { View, StyleSheet, Platform, ViewStyle } from "react-native";
+import { LAYERS, BORDER, RADII, BRAND } from "@/src/theme/tokens";
 
-interface Props {
+type CardVariant = "default" | "elevated" | "colored" | "flat";
+
+interface CardProps {
   children: React.ReactNode;
-  onPress?: () => void;
-  variant?: "static" | "tappable" | "elevated";
-  padding?: number;
-  style?: StyleProp<ViewStyle>;
+  variant?: CardVariant;
+  accentColor?: string;
+  style?: ViewStyle;
   testID?: string;
-  bare?: boolean;
 }
 
-/**
- * Premium card — wit oppervlak op canvas met subtiele border + zachte 2-laags schaduw.
- */
-export function Card({ children, onPress, variant = "static", padding = 20, style, testID, bare = false }: Props) {
-  const Inner = (
-    <View
-      style={[
-        styles.base,
-        {
-          padding,
-          borderRadius: RADII.lg,
-          backgroundColor: LAYERS.card,
-        },
-        !bare && {
-          borderWidth: 1,
-          borderColor: BORDER.subtle,
-        },
-        variant !== "elevated" ? shadow("sm") : shadow("md"),
-        style,
-      ]}
-      testID={testID}
-    >
-      {children}
-    </View>
-  );
-
-  if (onPress || variant === "tappable") {
-    return (
-      <TouchableOpacity activeOpacity={0.85} onPress={onPress}>
-        {Inner}
-      </TouchableOpacity>
-    );
-  }
-  return Inner;
+export function Card({ children, variant = "default", accentColor, style, testID }: CardProps) {
+  const baseStyle: ViewStyle = {
+    backgroundColor: LAYERS.card,
+    borderRadius: RADII.lg,
+    padding: 16,
+    ...(variant === "default" && {
+      borderWidth: 0.5,
+      borderColor: BORDER.subtle,
+    }),
+    ...(variant === "elevated" && {
+      borderWidth: 0.5,
+      borderColor: BORDER.subtle,
+      ...Platform.select({
+        ios: { shadowColor: "#000", shadowOpacity: 0.09, shadowRadius: 14, shadowOffset: { width: 0, height: 4 } },
+        android: { elevation: 3 },
+      }),
+    }),
+    ...(variant === "colored" && {
+      borderTopWidth: 3,
+      borderTopColor: accentColor || BRAND.blue,
+      borderWidth: 0.5,
+      borderColor: BORDER.subtle,
+      ...Platform.select({
+        ios: { shadowColor: accentColor || BRAND.blue, shadowOpacity: 0.10, shadowRadius: 10, shadowOffset: { width: 0, height: 3 } },
+        android: { elevation: 2 },
+      }),
+    }),
+    ...(variant === "flat" && {
+      backgroundColor: LAYERS.sidebar,
+      borderWidth: 0,
+    }),
+    ...(style as object),
+  };
+  return <View testID={testID} style={baseStyle}>{children}</View>;
 }
-
-const styles = StyleSheet.create({
-  base: {
-    overflow: "hidden",
-    position: "relative",
-  },
-});
