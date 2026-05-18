@@ -4,7 +4,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { OB } from './ob-theme';
+import { LinearGradient } from 'expo-linear-gradient';
+import { OB, JUNIE_COLORS } from './ob-theme';
 import { APP_NAME } from '@/src/config/branding';
 import { JunieLogo } from '@/src/components/JunieLogo';
 
@@ -13,35 +14,42 @@ interface Props {
 }
 
 const FEATURES = [
-  { icon: 'message-square' as const, label: 'AI-gesprek dat échte vragen stelt' },
-  { icon: 'check-square' as const, label: '24 gevalideerde zelftesten' },
-  { icon: 'lock' as const, label: 'Anoniem starten — EU-servers' },
+  { icon: 'message-square' as const, label: 'AI-gesprek dat échte vragen stelt', color: OB.accent },
+  { icon: 'check-square' as const, label: '24 gevalideerde zelftesten', color: OB.green },
+  { icon: 'lock' as const, label: 'Anoniem starten — EU-servers', color: OB.coral },
 ];
 
 export function WelcomeStep({ onNext }: Props) {
   const fade = React.useRef(new Animated.Value(0)).current;
+  const slideY = React.useRef(new Animated.Value(24)).current;
 
   React.useEffect(() => {
-    Animated.timing(fade, { toValue: 1, duration: 600, useNativeDriver: true }).start();
+    Animated.parallel([
+      Animated.timing(fade, { toValue: 1, duration: 700, useNativeDriver: true }),
+      Animated.timing(slideY, { toValue: 0, duration: 600, delay: 80, useNativeDriver: true }),
+    ]).start();
   }, []);
 
   return (
     <SafeAreaView style={s.root}>
-      <Animated.View style={[s.content, { opacity: fade }]}>
+      <Animated.View style={[s.content, { opacity: fade, transform: [{ translateY: slideY }] }]}>
         <View style={s.center}>
-          {/* Vijfkleurig Junie-woordmerk (hero) */}
-          <JunieLogo variant="multicolor" size={56} align="center" style={{ marginBottom: 18 }} />
+          {/* Vijfkleurig Junie-logo hero */}
+          <View style={s.logoWrap}>
+            <JunieLogo variant="multicolor" size={64} align="center" />
+          </View>
 
           <Text style={s.headline}>Welkom bij {APP_NAME}</Text>
           <Text style={s.body}>
-            Een rustige plek om eerlijk te praten over wat speelt. Geen oordeel, geen toxic positiviteit.
+            Een rustige plek om eerlijk te praten over wat speelt.{' '}
+            Geen oordeel, geen toxic positiviteit.
           </Text>
 
           <View style={s.features}>
             {FEATURES.map((f) => (
               <View key={f.label} style={s.feat}>
-                <View style={s.featIcon}>
-                  <Feather name={f.icon} size={14} color={OB.accent} />
+                <View style={[s.featIcon, { backgroundColor: f.color + '18' }]}>
+                  <Feather name={f.icon} size={15} color={f.color} />
                 </View>
                 <Text style={s.featText}>{f.label}</Text>
               </View>
@@ -52,7 +60,7 @@ export function WelcomeStep({ onNext }: Props) {
         <View style={s.bottom}>
           <TouchableOpacity style={s.cta} onPress={onNext} activeOpacity={0.85}>
             <Text style={s.ctaText}>Begin gesprek</Text>
-            <Feather name="arrow-right" size={17} color={OB.inverse} />
+            <Feather name="arrow-right" size={18} color={OB.inverse} />
           </TouchableOpacity>
           <Text style={s.privacy}>Anoniem · Versleuteld · Niets wordt doorverkocht</Text>
         </View>
@@ -63,33 +71,34 @@ export function WelcomeStep({ onNext }: Props) {
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: OB.bg },
-  content: { flex: 1, paddingHorizontal: 24, paddingTop: 12, paddingBottom: 16 },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
+  content: { flex: 1, paddingHorizontal: 28, paddingTop: 8, paddingBottom: 16 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 0 },
+  logoWrap: { marginBottom: 28, alignItems: 'center' },
   headline: {
-    fontSize: 28, fontWeight: '700', color: OB.textPrimary,
+    fontSize: 30, fontWeight: '700', color: OB.textPrimary,
     fontFamily: Platform.select({ ios: 'Nunito', android: 'sans-serif', default: 'system-ui' }),
-    letterSpacing: -0.4, textAlign: 'center',
+    letterSpacing: -0.6, textAlign: 'center', marginBottom: 12,
   },
   body: {
-    fontSize: 15, lineHeight: 22, color: OB.textMuted,
-    textAlign: 'center', maxWidth: 320, paddingHorizontal: 12, marginBottom: 6,
+    fontSize: 15.5, lineHeight: 23, color: OB.textMuted,
+    textAlign: 'center', maxWidth: 300, marginBottom: 32,
   },
-  features: { width: '100%', maxWidth: 320, gap: 12, marginTop: 8 },
-  feat: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  features: { width: '100%', maxWidth: 340, gap: 14 },
+  feat: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   featIcon: {
-    width: 30, height: 30, borderRadius: 8,
-    backgroundColor: OB.accentSoft, alignItems: 'center', justifyContent: 'center',
+    width: 36, height: 36, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center',
   },
-  featText: { fontSize: 14, color: OB.textSecondary, flex: 1, lineHeight: 19 },
-  bottom: { gap: 10 },
+  featText: { fontSize: 14.5, color: OB.textSecondary, flex: 1, lineHeight: 20 },
+  bottom: { gap: 12 },
   cta: {
-    height: 52, borderRadius: 8, backgroundColor: OB.accent,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9,
+    height: 54, borderRadius: 14, backgroundColor: OB.accent,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
     ...Platform.select({
-      ios: { shadowColor: OB.accent, shadowOpacity: 0.28, shadowRadius: 14, shadowOffset: { width: 0, height: 4 } },
-      android: { elevation: 3 },
+      ios: { shadowColor: OB.accent, shadowOpacity: 0.35, shadowRadius: 16, shadowOffset: { width: 0, height: 5 } },
+      android: { elevation: 5 },
     }),
   },
-  ctaText: { fontSize: 16, fontWeight: '600', color: OB.inverse, letterSpacing: 0.1 },
+  ctaText: { fontSize: 17, fontWeight: '700', color: OB.inverse, letterSpacing: -0.1 },
   privacy: { textAlign: 'center', fontSize: 11.5, color: OB.textFaint, letterSpacing: 0.3 },
 });
