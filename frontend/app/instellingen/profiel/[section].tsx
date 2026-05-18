@@ -436,7 +436,7 @@ function renderField(
                   },
                 ]}
               >
-                <Text style={[styles.chipText, { color: active ? "#0a0a0a" : palette.textPrimary }]}>
+                <Text style={[styles.chipText, { color: active ? "#ffffff" : palette.textPrimary }]}>
                   {o.label}
                 </Text>
               </TouchableOpacity>
@@ -474,7 +474,7 @@ function renderField(
                   },
                 ]}
               >
-                <Text style={[styles.chipText, { color: active ? "#0a0a0a" : palette.textPrimary }]}>
+                <Text style={[styles.chipText, { color: active ? "#ffffff" : palette.textPrimary }]}>
                   {o.label}
                 </Text>
               </TouchableOpacity>
@@ -506,7 +506,7 @@ function renderField(
                   },
                 ]}
               >
-                <Text style={[styles.sliderDotText, { color: active ? "#0a0a0a" : palette.textMuted }]}>
+                <Text style={[styles.sliderDotText, { color: active ? "#ffffff" : palette.textMuted }]}>
                   {val}
                 </Text>
               </TouchableOpacity>

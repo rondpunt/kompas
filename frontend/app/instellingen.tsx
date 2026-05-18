@@ -8,14 +8,12 @@ import { useAuth } from "@/src/auth/AuthContext";
 import { PlusModal } from "@/src/components/PlusModal";
 import { APP_NAME, APP_PLUS_NAME } from "@/src/config/branding";
 
-const THEME_OPTIONS = [
-  { id: "night", label: "Night" },
-  { id: "klaar", label: "Klaar" },
-  { id: "system", label: "Systeem" },
-] as const;
+const THEME_OPTIONS: { id: string; label: string }[] = [
+  { id: "night", label: "Dark" },
+];
 
 export default function Settings() {
-  const { palette, mode, setMode } = useTheme();
+  const { palette } = useTheme();
   const { state, user, signIn, signOut } = useAuth();
   const router = useRouter();
   const [loadingAuth, setLoadingAuth] = React.useState(false);
@@ -180,30 +178,13 @@ export default function Settings() {
 
         {/* Appearance section */}
         <Section title="Uiterlijk" palette={palette}>
-          {THEME_OPTIONS.map((opt) => {
-            const active = mode === opt.id;
-            return (
-              <TouchableOpacity
-                key={opt.id}
-                testID={`settings-theme-${opt.id}`}
-                onPress={() => setMode(opt.id)}
-                style={[
-                  styles.radioRow,
-                  { borderBottomColor: palette.borderSubtle },
-                ]}
-              >
-                <Text style={[styles.rowLabel, { color: palette.textPrimary }]}>{opt.label}</Text>
-                <View
-                  style={[
-                    styles.radioOuter,
-                    { borderColor: active ? palette.accent : palette.borderEmphasis },
-                  ]}
-                >
-                  {active && <View style={[styles.radioInner, { backgroundColor: palette.accent }]} />}
-                </View>
-              </TouchableOpacity>
-            );
-          })}
+          <View style={[styles.row, { borderBottomColor: palette.borderSubtle }]}>
+            <Text style={[styles.rowLabel, { color: palette.textPrimary }]}>Thema</Text>
+            <View style={[styles.themePill, { backgroundColor: palette.accentSoft }]}>
+              <View style={[styles.themeDot, { backgroundColor: palette.accent }]} />
+              <Text style={[styles.themePillText, { color: palette.textPrimary }]}>Dark</Text>
+            </View>
+          </View>
         </Section>
 
         {/* Language section */}
@@ -380,11 +361,21 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   plusBadgeText: {
-    color: "#0a0a0a",
+    color: "#ffffff",
     fontSize: 9,
     fontWeight: "700",
     letterSpacing: 0.5,
   },
+  themePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  themeDot: { width: 6, height: 6, borderRadius: 3 },
+  themePillText: { fontSize: 12, fontWeight: "600" },
   disclaimerBar: {
     paddingHorizontal: 18,
     paddingVertical: 10,

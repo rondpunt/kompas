@@ -432,12 +432,15 @@ agent_communication:
 
   - agent: "main"
     message: |
-      Iteratie 9 — Volledige UI samenhang & rebranding doorgevoerd (Junie).
-      - SecureHandshake kleuren van groen → warm amber (geen "groene slot" meer).
-      - Onboarding components (Welcome/Quiz/Privacy/Paywall/Confirmation) gebruiken nu ob-theme dat de NIGHT palette spiegelt (#0a0a0a / #f59e0b).
-      - Compactere typografie, minder geforceerd scrollen, ChatGPT-achtige layout.
-      - Brand sweep: instellingen.tsx, profiel(/index, /[section]), result/[resultId] tonen nu "Junie".
-      - Settings: PlusModal nu actief vanuit "Probeer Junie Plus" + nieuwe "Gemeenschap" sectie naar /community.
-      - Confirmation step: check-icoon nu orange amber i.p.v. groen.
+      Iteratie 10 — Volledige design system v3 doorgevoerd (Junie premium dark).
+      - Nieuw token-bestand `/app/frontend/src/theme/tokens.ts` (LAYERS, BRAND, RADII, shadows, glowBlue, typografie).
+      - Theme nu **dark-only** (Klaar verwijderd, `ThemeContext` locked).
+      - Brand palette geswitcht naar Junie blue (#4A90E2 + multicolor accents).
+      - Multicolor Junie logo asset toegevoegd `/app/frontend/assets/images/junie-logo.png` en geserveerd via `JunieLogo` component.
+      - Settings: appearance gereduceerd tot pill "Dark", thema-switcher verwijderd.
+      - SecureHandshake: groen/amber → Junie blue (consistent).
+      - Community hero splash: amber → blue.
+      - Alle inverse text op accent buttons nu wit (was #0a0a0a).
+      - Tokens-component-pack toegevoegd: `Button` (primary/rainbow/secondary/danger), `Card` (gradient + inner-highlight + shadow-system).
       Geen backend wijzigingen.
 

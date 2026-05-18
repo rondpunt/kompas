@@ -159,7 +159,7 @@ export default function Community() {
         <View style={[styles.heroCard, { backgroundColor: palette.surfaceElevated, borderColor: palette.borderSubtle }]}> 
           <View style={styles.heroGlow} />
           <View style={[styles.plusBadge, { backgroundColor: palette.accent }]}> 
-            <Feather name="moon" size={10} color="#0a0a0a" />
+            <Feather name="moon" size={10} color="#ffffff" />
             <Text style={styles.plusBadgeText}>BETA · READ-ONLY</Text>
           </View>
           <Text
@@ -217,7 +217,7 @@ export default function Community() {
               onPress={saveNickname}
               style={[styles.identityBtn, { backgroundColor: palette.accent, opacity: savingNick ? 0.7 : 1 }]}
             >
-              {savingNick ? <ActivityIndicator size="small" color="#0a0a0a" /> : <Text style={styles.identityBtnText}>Opslaan</Text>}
+              {savingNick ? <ActivityIndicator size="small" color="#ffffff" /> : <Text style={styles.identityBtnText}>Opslaan</Text>}
             </TouchableOpacity>
           </View>
           <Text style={[styles.identityHint, { color: palette.textMuted }]}>Je echte identiteit is nergens zichtbaar in de feed.</Text>
@@ -241,7 +241,7 @@ export default function Community() {
               disabled={posting || !postDraft.trim()}
               style={[styles.composeBtn, { backgroundColor: palette.accent, opacity: posting || !postDraft.trim() ? 0.65 : 1 }]}
             >
-              {posting ? <ActivityIndicator size="small" color="#0a0a0a" /> : <Text style={styles.composeBtnText}>Plaats anoniem</Text>}
+              {posting ? <ActivityIndicator size="small" color="#ffffff" /> : <Text style={styles.composeBtnText}>Plaats anoniem</Text>}
             </TouchableOpacity>
           </View>
         ) : (
@@ -413,7 +413,7 @@ const styles = StyleSheet.create({
     right: -70,
     top: -90,
     borderRadius: 110,
-    backgroundColor: "rgba(245, 158, 11, 0.12)",
+    backgroundColor: "rgba(74, 144, 226, 0.15)",
   },
   plusBadge: {
     alignSelf: "flex-start",
@@ -426,7 +426,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   plusBadgeText: {
-    color: "#0a0a0a",
+    color: "#ffffff",
     fontSize: 10,
     fontWeight: "700",
     letterSpacing: 0.4,
@@ -461,7 +461,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   heroCtaText: {
-    color: "#0a0a0a",
+    color: "#ffffff",
     fontSize: 14,
     fontWeight: "700",
   },
@@ -488,7 +488,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 14,
   },
-  identityBtnText: { color: "#0a0a0a", fontWeight: "700", fontSize: 12.5 },
+  identityBtnText: { color: "#ffffff", fontWeight: "700", fontSize: 12.5 },
   identityHint: { marginTop: 7, fontSize: 11.5 },
   composeCard: {
     borderRadius: 14,
@@ -508,7 +508,7 @@ const styles = StyleSheet.create({
     textAlignVertical: "top",
   },
   composeBtn: { minHeight: 42, borderRadius: 10, alignItems: "center", justifyContent: "center" },
-  composeBtnText: { color: "#0a0a0a", fontSize: 13, fontWeight: "700" },
+  composeBtnText: { color: "#ffffff", fontSize: 13, fontWeight: "700" },
   lockedCard: {
     borderRadius: 14,
     borderWidth: 0.5,

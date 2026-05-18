@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   plusBadgeText: {
-    color: "#0a0a0a",
+    color: "#ffffff",
     fontSize: 9,
     fontWeight: "700",
     letterSpacing: 0.5,

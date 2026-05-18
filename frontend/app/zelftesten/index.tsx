@@ -131,7 +131,7 @@ export default function ZelftestenIndex() {
                 <Text
                   style={[
                     styles.chipText,
-                    { color: active ? "#0a0a0a" : palette.textSecondary },
+                    { color: active ? "#ffffff" : palette.textSecondary },
                   ]}
                 >
                   {c.label}
@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   plusBadgeText: {
-    color: "#0a0a0a",
+    color: "#ffffff",
     fontSize: 9,
     fontWeight: "700",
     letterSpacing: 0.5,

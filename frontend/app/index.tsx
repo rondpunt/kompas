@@ -16,7 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useTheme } from "@/src/theme/ThemeContext";
-import { Wordmark } from "@/src/components/Wordmark";
+import { Wordmark, JunieLogo } from "@/src/components/JunieLogo";
 import { Sidebar } from "@/src/components/Sidebar";
 import { TestSuggestionPill } from "@/src/components/TestSuggestionPill";
 import { SecureHandshake } from "@/src/components/SecureHandshake";
@@ -299,23 +299,8 @@ export default function ChatScreen() {
             showsVerticalScrollIndicator={false}
             testID="chat-empty"
           >
-            <View
-              style={[
-                styles.emptyHaloOuter,
-                {
-                  borderColor: palette.accent + "22",
-                  backgroundColor: palette.accentSoft,
-                },
-              ]}
-            >
-              <View
-                style={[
-                  styles.emptyHaloInner,
-                  { borderColor: palette.accent + "55", backgroundColor: palette.background },
-                ]}
-              >
-                <Feather name="compass" size={26} color={palette.accent} />
-              </View>
+            <View style={styles.emptyLogo}>
+              <JunieLogo size={88} variant="mark" />
             </View>
             <Text style={[styles.emptyText, { color: palette.textPrimary }]}>Wat speelt er?</Text>
             <Text style={[styles.tagline, { color: palette.textMuted }]}>Voor wat speelt.</Text>
@@ -437,7 +422,7 @@ export default function ChatScreen() {
                     style={[styles.suggestionBtnPrimary, { backgroundColor: palette.accent, opacity: confirmingSuggestion ? 0.6 : 1 }]}
                   >
                     {confirmingSuggestion === "accept" ? (
-                      <ActivityIndicator size="small" color="#0a0a0a" />
+                      <ActivityIndicator size="small" color="#ffffff" />
                     ) : (
                       <Text style={styles.suggestionBtnPrimaryText}>Ja, toevoegen</Text>
                     )}
@@ -496,9 +481,9 @@ export default function ChatScreen() {
                 style={[styles.sendBtn, { backgroundColor: palette.accent }]}
               >
                 {sending ? (
-                  <ActivityIndicator size="small" color="#0a0a0a" />
+                  <ActivityIndicator size="small" color="#ffffff" />
                 ) : (
-                  <Feather name="arrow-up" size={18} color="#0a0a0a" />
+                  <Feather name="arrow-up" size={18} color="#ffffff" />
                 )}
               </TouchableOpacity>
             ) : (
@@ -585,6 +570,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 24,
     paddingVertical: 32,
+  },
+  emptyLogo: {
+    marginBottom: 20,
+    alignItems: "center",
+    justifyContent: "center",
   },
   emptyHaloOuter: {
     width: 92,
@@ -741,7 +731,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     ...Platform.select({
       ios: {
-        shadowColor: "#f59e0b",
+        shadowColor: "#4A90E2",
         shadowOpacity: 0.35,
         shadowRadius: 6,
         shadowOffset: { width: 0, height: 2 },
@@ -852,6 +842,6 @@ const styles = StyleSheet.create({
   suggestionBtnPrimaryText: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#0a0a0a",
+    color: "#ffffff",
   },
 });

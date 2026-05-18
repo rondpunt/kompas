@@ -1,7 +1,7 @@
-// Kompas Design Tokens — Night (default) + Klaar themes
-// Per /app/design_guidelines.json
+// Junie v3 — Premium dark tokens. Single dark palette (no light variant).
+// Per /app/frontend/src/theme/tokens.ts.
 
-export type ThemeName = "night" | "klaar";
+export type ThemeName = "night";
 
 export interface Palette {
   background: string;
@@ -21,56 +21,34 @@ export interface Palette {
   warning: string;
   danger: string;
   dangerBg: string;
-  // Inverted on primary button (e.g. text inside white button on Night)
   inversePrimary: string;
 }
 
 export const NIGHT: Palette = {
-  background: "#0a0a0a",
-  surfaceElevated: "#161616",
-  surfaceHigher: "#1f1f1f",
-  borderSubtle: "#1f1f1f",
-  borderDefault: "#262626",
-  borderEmphasis: "#383838",
-  textPrimary: "#fafafa",
-  textSecondary: "#a3a3a3",
-  textMuted: "#737373",
-  textFaint: "#525252",
-  accent: "#f59e0b",
-  accentSoft: "rgba(245, 158, 11, 0.16)",
-  success: "#84cc16",
-  successBg: "#1a3309",
-  warning: "#FAC775",
-  danger: "#ef4444",
-  dangerBg: "#450a0a",
-  inversePrimary: "#0a0a0a",
+  background: "#1A1A1A",
+  surfaceElevated: "#242424",
+  surfaceHigher: "#2C2C2C",
+  borderSubtle: "rgba(255,255,255,0.05)",
+  borderDefault: "rgba(255,255,255,0.08)",
+  borderEmphasis: "rgba(255,255,255,0.16)",
+  textPrimary: "#ECECEC",
+  textSecondary: "#B8B8B8",
+  textMuted: "#8E8E8E",
+  textFaint: "#5E5E5E",
+  accent: "#4A90E2",
+  accentSoft: "rgba(74,144,226,0.15)",
+  success: "#7ED957",
+  successBg: "rgba(126,217,87,0.12)",
+  warning: "#F5C84B",
+  danger: "#E85D5D",
+  dangerBg: "rgba(232,93,93,0.12)",
+  inversePrimary: "#FFFFFF",
 };
 
-export const KLAAR: Palette = {
-  background: "#ffffff",
-  surfaceElevated: "#f4f4f4",
-  surfaceHigher: "#ececec",
-  borderSubtle: "#ececec",
-  borderDefault: "#e0e0e0",
-  borderEmphasis: "#c8c8c8",
-  textPrimary: "#0d0d0d",
-  textSecondary: "#525252",
-  textMuted: "#737373",
-  textFaint: "#a3a3a3",
-  accent: "#d97706",
-  accentSoft: "#faeeda",
-  success: "#4d7c0f",
-  successBg: "#ecfccb",
-  warning: "#854F0B",
-  danger: "#b91c1c",
-  dangerBg: "#fee2e2",
-  inversePrimary: "#ffffff",
-};
-
-export const palettes: Record<ThemeName, Palette> = {
-  night: NIGHT,
-  klaar: KLAAR,
-};
+// KLAAR removed — Junie v3 is dark-only.
+// Keep alias for legacy imports.
+export const KLAAR: Palette = NIGHT;
+export const palettes = { night: NIGHT } as const;
 
 // Category-icon tints (mapped to backgrounds). 800-900 hex stops for night, 50-100 for klaar.
 export interface CategoryStyle {

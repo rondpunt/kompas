@@ -1,25 +1,26 @@
-// Onboarding design tokens — Junie warm-dark premium (matches main NIGHT palette)
-// Single source of truth for onboarding visuals.
+// Onboarding design tokens — Junie v3 premium dark (mirrors main NIGHT palette)
+// Single source of truth voor onboarding visuals.
 
 export const OB = {
-  bg: '#0a0a0a',
-  surface: '#161616',
-  elevated: '#1f1f1f',
-  border: '#262626',
-  borderSubtle: '#1f1f1f',
-  borderFocus: '#f59e0b',
-  textPrimary: '#fafafa',
-  textSecondary: '#d4d4d4',
-  textMuted: '#a3a3a3',
-  textFaint: '#525252',
-  accent: '#f59e0b',
-  accentHover: '#fbbf24',
-  accentSoft: 'rgba(245, 158, 11, 0.16)',
-  success: '#f59e0b', // unified — no jarring green check on confirmation
-  successBg: 'rgba(245, 158, 11, 0.12)',
-  danger: '#ef4444',
-  white: '#fafafa',
-  inverse: '#0a0a0a', // text on accent buttons
+  bg: '#1A1A1A',
+  surface: '#242424',
+  elevated: '#2C2C2C',
+  border: 'rgba(255,255,255,0.08)',
+  borderSubtle: 'rgba(255,255,255,0.05)',
+  borderFocus: '#4A90E2',
+  textPrimary: '#ECECEC',
+  textSecondary: '#B8B8B8',
+  textMuted: '#8E8E8E',
+  textFaint: '#5E5E5E',
+  accent: '#4A90E2',
+  accentLight: '#5BA0F0',
+  accentHover: '#6BACF5',
+  accentSoft: 'rgba(74,144,226,0.15)',
+  success: '#7ED957',
+  successBg: 'rgba(126,217,87,0.12)',
+  danger: '#E85D5D',
+  white: '#FFFFFF',
+  inverse: '#FFFFFF', // tekst op blauwe knoppen
 } as const;
 
 export const OBFonts = {

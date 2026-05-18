@@ -32,7 +32,7 @@ export function PlusHintBanner({ variant = "chat", message, onPress, onDismiss, 
       ]}
     >
       <View style={[styles.iconBox, { backgroundColor: palette.accent }]}>
-        <Feather name="zap" size={12} color="#0a0a0a" />
+        <Feather name="zap" size={12} color="#ffffff" />
       </View>
       <TouchableOpacity onPress={onPress} style={styles.textBtn} activeOpacity={0.7}>
         <Text style={[styles.text, { color: palette.textPrimary }]} numberOfLines={2}>
@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
     gap: 8,
     ...Platform.select({
       ios: {
-        shadowColor: "#f59e0b",
+        shadowColor: "#4A90E2",
         shadowOpacity: 0.15,
         shadowRadius: 12,
         shadowOffset: { width: 0, height: 4 },

@@ -1,51 +1,29 @@
-import React, { createContext, useContext, useEffect, useState, useMemo } from "react";
-import { useColorScheme } from "react-native";
-import { storage } from "@/src/utils/storage";
-import { NIGHT, KLAAR, Palette, ThemeName } from "./colors";
+import React, { createContext, useContext, useMemo } from "react";
+import { NIGHT, Palette } from "./colors";
 
-type ThemeMode = "night" | "klaar" | "system";
+// Junie v3: alleen dark mode. We keep the provider for API compatibility,
+// but mode is locked to "night" — geen lichte variant.
+type ThemeMode = "night";
 
 interface ThemeContextValue {
   mode: ThemeMode;
   setMode: (m: ThemeMode) => void;
-  theme: ThemeName;
+  theme: ThemeMode;
   palette: Palette;
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-const STORAGE_KEY = "kompas.theme.mode";
-
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const system = useColorScheme();
-  const [mode, setModeState] = useState<ThemeMode>("night");
-  const [loaded, setLoaded] = useState(false);
-
-  useEffect(() => {
-    (async () => {
-      const saved = await storage.getItem<string>(STORAGE_KEY, "night");
-      if (saved === "night" || saved === "klaar" || saved === "system") {
-        setModeState(saved);
-      }
-      setLoaded(true);
-    })();
-  }, []);
-
-  const setMode = (m: ThemeMode) => {
-    setModeState(m);
-    storage.setItem(STORAGE_KEY, m);
-  };
-
-  const theme: ThemeName = useMemo(() => {
-    if (mode === "system") return system === "light" ? "klaar" : "night";
-    return mode;
-  }, [mode, system]);
-
-  const palette = theme === "night" ? NIGHT : KLAAR;
-
-  const value = useMemo(() => ({ mode, setMode, theme, palette }), [mode, theme, palette]);
-
-  if (!loaded) return null;
+  const value = useMemo<ThemeContextValue>(
+    () => ({
+      mode: "night",
+      setMode: () => {},
+      theme: "night",
+      palette: NIGHT,
+    }),
+    [],
+  );
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 

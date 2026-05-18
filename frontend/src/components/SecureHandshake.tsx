@@ -19,16 +19,16 @@ interface Props {
   variant?: "full" | "short";
 }
 
-// Spec colors — warm dark premium (matches Junie main theme)
+// Spec colors — Junie premium dark (matches main NIGHT palette)
 const COLORS = {
-  primary: "#f59e0b",
-  primaryDark: "#b45309",
-  primaryLight: "rgba(245, 158, 11, 0.16)",
-  primaryLightSoft: "rgba(245, 158, 11, 0.08)",
-  ringStroke: "rgba(245, 158, 11, 0.35)",
-  glow: "rgba(245, 158, 11, 0.18)",
-  badgeBg: "rgba(245, 158, 11, 0.12)",
-  badgeText: "#fbbf24",
+  primary: "#4A90E2",
+  primaryDark: "#3A7BC8",
+  primaryLight: "rgba(74, 144, 226, 0.18)",
+  primaryLightSoft: "rgba(74, 144, 226, 0.08)",
+  ringStroke: "rgba(74, 144, 226, 0.35)",
+  glow: "rgba(74, 144, 226, 0.20)",
+  badgeBg: "rgba(74, 144, 226, 0.14)",
+  badgeText: "#7DB6F0",
 };
 
 const STEPS = ["Verbinding beveiligd", "Sleutels aangemaakt", "Berichten versleuteld"];
@@ -640,9 +640,9 @@ const styles = StyleSheet.create({
     }),
   },
   ctaText: {
-    color: "#0a0a0a",
+    color: "#ffffff",
     fontSize: 15,
-    fontWeight: "700",
+    fontWeight: "600",
     letterSpacing: 0.2,
   },
 });

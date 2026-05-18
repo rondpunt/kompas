@@ -138,7 +138,7 @@ export default function CommunityDMThreadScreen() {
               disabled={sending || !draft.trim()}
               style={[styles.sendBtn, { backgroundColor: palette.accent, opacity: sending || !draft.trim() ? 0.65 : 1 }]}
             >
-              {sending ? <ActivityIndicator size="small" color="#0a0a0a" /> : <Feather name="send" size={15} color="#0a0a0a" />}
+              {sending ? <ActivityIndicator size="small" color="#ffffff" /> : <Feather name="send" size={15} color="#ffffff" />}
             </TouchableOpacity>
           </View>
         </>
@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 20,
   },
-  plusBtnText: { color: "#0a0a0a", fontSize: 13, fontWeight: "700" },
+  plusBtnText: { color: "#ffffff", fontSize: 13, fontWeight: "700" },
   threadBody: { padding: 12, gap: 8, paddingBottom: 24 },
   msgBubble: {
     maxWidth: "84%",

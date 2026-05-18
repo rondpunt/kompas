@@ -109,7 +109,7 @@ export function PlusModal({ visible, reason = "generic", onClose, onNotify, test
           </View>
 
           <View style={[styles.eyebrowPill, { backgroundColor: palette.accent }]}>
-            <Feather name="zap" size={11} color="#0a0a0a" />
+            <Feather name="zap" size={11} color="#ffffff" />
             <Text style={styles.eyebrowText}>{copy.eyebrow}</Text>
           </View>
 
@@ -154,7 +154,7 @@ export function PlusModal({ visible, reason = "generic", onClose, onNotify, test
             }}
             style={[styles.primaryBtn, { backgroundColor: palette.accent }]}
           >
-            <Text style={[styles.primaryBtnText, { color: "#0a0a0a" }]}>{copy.cta}</Text>
+            <Text style={[styles.primaryBtnText, { color: "#ffffff" }]}>{copy.cta}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity onPress={onClose} testID="plus-modal-close" style={styles.closeBtn}>
@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   eyebrowText: {
-    color: "#0a0a0a",
+    color: "#ffffff",
     fontSize: 10.5,
     fontWeight: "700",
     letterSpacing: 0.4,

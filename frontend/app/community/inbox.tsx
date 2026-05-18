@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 18,
   },
-  plusBtnText: { color: "#0a0a0a", fontWeight: "700", fontSize: 13 },
+  plusBtnText: { color: "#ffffff", fontWeight: "700", fontSize: 13 },
   emptyTitle: { fontSize: 16, fontWeight: "600", marginBottom: 6 },
   emptyBody: { fontSize: 12.5, textAlign: "center" },
   body: { padding: 12, gap: 8, paddingBottom: 24 },
@@ -143,5 +143,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 6,
   },
-  unreadText: { color: "#0a0a0a", fontSize: 11.5, fontWeight: "700" },
+  unreadText: { color: "#ffffff", fontSize: 11.5, fontWeight: "700" },
 });

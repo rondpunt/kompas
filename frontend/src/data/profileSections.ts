@@ -29,7 +29,7 @@ export const SECTIONS: SectionMeta[] = [
     title: "Basis",
     subtitle: "Naam, hoe je aangesproken wil worden",
     icon: "user",
-    tint: "#f59e0b",
+    tint: "#4A90E2",
     tintSoft: "rgba(245, 158, 11, 0.14)",
     important: true,
   },
