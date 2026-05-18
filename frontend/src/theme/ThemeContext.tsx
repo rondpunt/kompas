@@ -1,34 +1,36 @@
-import React, { createContext, useContext, useMemo } from "react";
-import { NIGHT, Palette } from "./colors";
+import React, { createContext, useContext, useState, useCallback } from "react";
+import { PALETTE, PALETTE_DARK } from "@/src/theme/tokens";
 
-// Junie v3: alleen dark mode. We keep the provider for API compatibility,
-// but mode is locked to "night" — geen lichte variant.
-type ThemeMode = "night";
+type ThemePalette = typeof PALETTE;
 
 interface ThemeContextValue {
-  mode: ThemeMode;
-  setMode: (m: ThemeMode) => void;
-  theme: ThemeMode;
-  palette: Palette;
+  palette: ThemePalette;
+  colorScheme: "light" | "dark";
+  toggleTheme: () => void;
 }
 
-const ThemeContext = createContext<ThemeContextValue | null>(null);
+const ThemeContext = createContext<ThemeContextValue>({
+  palette: PALETTE,
+  colorScheme: "light",
+  toggleTheme: () => {},
+});
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const value = useMemo<ThemeContextValue>(
-    () => ({
-      mode: "night",
-      setMode: () => {},
-      theme: "night",
-      palette: NIGHT,
-    }),
-    [],
+  const [colorScheme, setColorScheme] = useState<"light" | "dark">("light");
+
+  const toggleTheme = useCallback(() => {
+    setColorScheme((prev) => (prev === "light" ? "dark" : "light"));
+  }, []);
+
+  const palette = colorScheme === "dark" ? (PALETTE_DARK as unknown as ThemePalette) : PALETTE;
+
+  return (
+    <ThemeContext.Provider value={{ palette, colorScheme, toggleTheme }}>
+      {children}
+    </ThemeContext.Provider>
   );
-  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 
 export function useTheme() {
-  const ctx = useContext(ThemeContext);
-  if (!ctx) throw new Error("useTheme must be used inside ThemeProvider");
-  return ctx;
+  return useContext(ThemeContext);
 }
