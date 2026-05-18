@@ -1,36 +1,37 @@
-import React from "react";
-import { View } from "react-native";
-import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
-import { CATEGORY_STYLES } from "@/src/theme/colors";
-import { useTheme } from "@/src/theme/ThemeContext";
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+
+// Junie 5 brand colors — één per categorie
+const CATEGORY_COLORS: Record<string, { bg: string; emoji: string }> = {
+  angst:        { bg: '#4A90E222', emoji: '😤' },
+  depressie:    { bg: '#7ED95722', emoji: '🌱' },
+  stress:       { bg: '#F5C84B22', emoji: '🌀' },
+  slaap:        { bg: '#F39C4D22', emoji: '🌙' },
+  relaties:     { bg: '#E85A5A22', emoji: '💙' },
+  zelfvertrouwen:{ bg: '#4A90E222', emoji: '⭐' },
+  rouw:         { bg: '#7ED95722', emoji: '🕊️' },
+  burn_out:     { bg: '#F5C84B22', emoji: '🔥' },
+  default:      { bg: '#4A90E222', emoji: '🌿' },
+};
 
 interface Props {
-  category: string;
+  category?: string;
   size?: number;
-  iconSize?: number;
 }
 
-export function CategoryIcon({ category, size = 36, iconSize = 18 }: Props) {
-  const { theme } = useTheme();
-  const style = CATEGORY_STYLES[category];
-  if (!style) {
-    return <View style={{ width: size, height: size }} />;
-  }
-  const bg = theme === "night" ? style.bgNight : style.bgKlaar;
-  const fg = theme === "night" ? style.fgNight : style.fgKlaar;
-  const Lib = style.iconLib === "Feather" ? Feather : MaterialCommunityIcons;
+export function CategoryIcon({ category = 'default', size = 40 }: Props) {
+  const key = (category || 'default').toLowerCase().replace(/ /g, '_');
+  const cfg = CATEGORY_COLORS[key] ?? CATEGORY_COLORS['default'];
+
   return (
-    <View
-      style={{
-        width: size,
-        height: size,
-        borderRadius: 10,
-        backgroundColor: bg,
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <Lib name={style.iconName as any} size={iconSize} color={fg} />
+    <View style={[styles.icon, { width: size, height: size, borderRadius: size / 4, backgroundColor: cfg.bg }]}>
+      <Text style={{ fontSize: size * 0.45 }}>{cfg.emoji}</Text>
     </View>
   );
 }
+
+export default CategoryIcon;
+
+const styles = StyleSheet.create({
+  icon: { alignItems: 'center', justifyContent: 'center' },
+});
