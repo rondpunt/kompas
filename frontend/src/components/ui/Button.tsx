@@ -2,213 +2,122 @@ import React from "react";
 import {
   TouchableOpacity,
   Text,
-  ActivityIndicator,
   StyleSheet,
-  View,
+  ActivityIndicator,
+  Platform,
   ViewStyle,
-  StyleProp,
-  GestureResponderEvent,
+  TextStyle,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import { Feather } from "@expo/vector-icons";
-import {
-  BRAND,
-  BORDER,
-  RADII,
-  TEXT,
-  JUNIE_GRADIENT,
-  glowBlue,
-  shadow,
-} from "@/src/theme/tokens";
+import { BRAND, RADII, TYPE } from "@/src/theme/tokens";
 
-type Variant = "primary" | "secondary" | "tertiary" | "rainbow" | "danger";
+type Variant = "primary" | "secondary" | "ghost" | "danger";
 type Size = "sm" | "md" | "lg";
 
-interface Props {
-  label?: string;
-  onPress?: (e: GestureResponderEvent) => void;
+interface ButtonProps {
+  label: string;
+  onPress: () => void;
   variant?: Variant;
   size?: Size;
-  icon?: keyof typeof Feather.glyphMap;
-  iconRight?: keyof typeof Feather.glyphMap;
-  loading?: boolean;
   disabled?: boolean;
+  loading?: boolean;
   fullWidth?: boolean;
-  style?: StyleProp<ViewStyle>;
   testID?: string;
-  children?: React.ReactNode;
+  style?: ViewStyle;
 }
 
-const HEIGHT_MAP: Record<Size, number> = { sm: 36, md: 44, lg: 52 };
-const PAD_X_MAP: Record<Size, number> = { sm: 14, md: 20, lg: 24 };
-const FS_MAP: Record<Size, number> = { sm: 14, md: 15, lg: 16 };
+const SIZE_MAP: Record<Size, { height: number; px: number; fontSize: number }> = {
+  sm: { height: 36, px: 14, fontSize: 13 },
+  md: { height: 44, px: 20, fontSize: 15 },
+  lg: { height: 52, px: 24, fontSize: 16 },
+};
 
 export function Button({
   label,
   onPress,
   variant = "primary",
   size = "md",
-  icon,
-  iconRight,
-  loading = false,
   disabled = false,
+  loading = false,
   fullWidth = false,
-  style,
   testID,
-  children,
-}: Props) {
-  const height = HEIGHT_MAP[size];
-  const pad = PAD_X_MAP[size];
-  const fs = FS_MAP[size];
-  const radius = RADII.sm; // 8px (chatgpt-stijl knoppen)
+  style,
+}: ButtonProps) {
+  const s = SIZE_MAP[size];
+  const isDisabled = disabled || loading;
 
-  const isInert = disabled || loading;
+  const containerStyle: ViewStyle = {
+    height: s.height,
+    paddingHorizontal: s.px,
+    borderRadius: RADII.md,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    alignSelf: fullWidth ? "stretch" : "flex-start",
+    opacity: isDisabled ? 0.55 : 1,
+    ...(variant === "primary" && {
+      backgroundColor: BRAND.blue,
+      ...Platform.select({
+        ios: {
+          shadowColor: BRAND.blue,
+          shadowOpacity: 0.30,
+          shadowRadius: 10,
+          shadowOffset: { width: 0, height: 4 },
+        },
+        android: { elevation: 4 },
+      }),
+    }),
+    ...(variant === "secondary" && {
+      backgroundColor: "transparent",
+      borderWidth: 1.5,
+      borderColor: BRAND.blue,
+    }),
+    ...(variant === "ghost" && {
+      backgroundColor: "transparent",
+    }),
+    ...(variant === "danger" && {
+      backgroundColor: "#EF4444",
+      ...Platform.select({
+        ios: {
+          shadowColor: "#EF4444",
+          shadowOpacity: 0.25,
+          shadowRadius: 8,
+          shadowOffset: { width: 0, height: 3 },
+        },
+        android: { elevation: 3 },
+      }),
+    }),
+    ...(style as object),
+  };
 
-  const InnerContent = (
-    <View style={[styles.row, { paddingHorizontal: pad }]}>
-      {icon ? <Feather name={icon} size={fs + 1} color={iconColor(variant)} /> : null}
-      {loading ? (
-        <ActivityIndicator size="small" color={iconColor(variant)} />
-      ) : children ? (
-        children
-      ) : (
-        <Text style={[styles.label, { fontSize: fs, color: textColor(variant) }]} numberOfLines={1}>
-          {label}
-        </Text>
-      )}
-      {iconRight ? <Feather name={iconRight} size={fs + 1} color={iconColor(variant)} /> : null}
-    </View>
-  );
+  const labelColor =
+    variant === "primary" || variant === "danger"
+      ? "#FFFFFF"
+      : variant === "secondary"
+      ? BRAND.blue
+      : "#111111";
 
-  const outerStyle: StyleProp<ViewStyle> = [
-    {
-      height,
-      borderRadius: radius,
-      overflow: "hidden",
-      opacity: disabled ? 0.6 : 1,
-    },
-    fullWidth ? { alignSelf: "stretch" } : null,
-    variant === "primary" ? glowBlue("soft") : null,
-    variant === "rainbow" ? glowBlue("strong") : null,
-    style,
-  ];
-
-  if (variant === "primary") {
-    return (
-      <TouchableOpacity
-        testID={testID}
-        activeOpacity={isInert ? 1 : 0.85}
-        onPress={isInert ? undefined : onPress}
-        disabled={isInert}
-        style={outerStyle}
-      >
-        <LinearGradient
-          colors={[BRAND.blueLight, BRAND.blue]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-          style={StyleSheet.absoluteFillObject}
-        />
-        {InnerContent}
-      </TouchableOpacity>
-    );
-  }
-
-  if (variant === "rainbow") {
-    return (
-      <TouchableOpacity
-        testID={testID}
-        activeOpacity={isInert ? 1 : 0.85}
-        onPress={isInert ? undefined : onPress}
-        disabled={isInert}
-        style={outerStyle}
-      >
-        <LinearGradient
-          colors={JUNIE_GRADIENT as unknown as readonly [string, string, ...string[]]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFillObject}
-        />
-        {InnerContent}
-      </TouchableOpacity>
-    );
-  }
-
-  if (variant === "secondary") {
-    return (
-      <TouchableOpacity
-        testID={testID}
-        activeOpacity={isInert ? 1 : 0.75}
-        onPress={isInert ? undefined : onPress}
-        disabled={isInert}
-        style={[
-          outerStyle,
-          {
-            backgroundColor: "transparent",
-            borderWidth: 1.5,
-            borderColor: BRAND.blue,
-          },
-        ]}
-      >
-        {InnerContent}
-      </TouchableOpacity>
-    );
-  }
-
-  if (variant === "danger") {
-    return (
-      <TouchableOpacity
-        testID={testID}
-        activeOpacity={isInert ? 1 : 0.85}
-        onPress={isInert ? undefined : onPress}
-        disabled={isInert}
-        style={[outerStyle, { backgroundColor: BRAND.coral }]}
-      >
-        {InnerContent}
-      </TouchableOpacity>
-    );
-  }
-
-  // tertiary — text only
   return (
     <TouchableOpacity
       testID={testID}
-      activeOpacity={isInert ? 1 : 0.65}
-      onPress={isInert ? undefined : onPress}
-      disabled={isInert}
-      style={[outerStyle, { backgroundColor: "transparent" }]}
+      onPress={onPress}
+      disabled={isDisabled}
+      activeOpacity={0.78}
+      style={containerStyle}
     >
-      {InnerContent}
+      {loading ? (
+        <ActivityIndicator size="small" color={labelColor} />
+      ) : (
+        <Text
+          style={{
+            color: labelColor,
+            fontSize: s.fontSize,
+            fontWeight: "600",
+            letterSpacing: -0.1,
+          }}
+        >
+          {label}
+        </Text>
+      )}
     </TouchableOpacity>
   );
 }
-
-function textColor(v: Variant): string {
-  switch (v) {
-    case "primary":
-    case "rainbow":
-    case "danger":
-      return "#FFFFFF";
-    case "secondary":
-      return BRAND.blue;
-    default:
-      return TEXT.primary;
-  }
-}
-
-function iconColor(v: Variant): string {
-  return textColor(v);
-}
-
-const styles = StyleSheet.create({
-  row: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
-  label: {
-    fontWeight: "600",
-    letterSpacing: 0.1,
-  },
-});
