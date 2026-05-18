@@ -1,139 +1,85 @@
-import React, { useEffect, useRef } from 'react';
-import {
-  View, Text, TouchableOpacity, StyleSheet, Animated, Platform,
-} from 'react-native';
+import React, { useRef, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Platform, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { OB, OBFonts } from './ob-theme';
+import { OB } from './ob-theme';
 import { APP_NAME } from '@/src/config/branding';
 
-interface Props {
-  trialEndsAt: string | null;
-  onChat: () => void;
-  onTests: () => void;
-  onSettings: () => void;
-  onDone: () => void;
-}
+interface Props { trialEndsAt: string | null; onChat: () => void; onTests: () => void; onSettings: () => void; onDone: () => void; }
 
-const NEXT_STEPS = [
-  { icon: 'message-circle' as const, title: 'Begin een gesprek', desc: 'Praat over wat speelt.' },
-  { icon: 'check-square' as const, title: 'Verken de testen', desc: '24 gevalideerde screeners.' },
-  { icon: 'settings' as const, title: 'Stel jezelf in', desc: 'Thema, privacy, profiel.' },
-];
+const ACTIONS = [
+  { icon: 'message-circle', label: 'Start een gesprek', key: 'chat', color: '#4A90E2' },
+  { icon: 'check-square', label: 'Doe een zelftest', key: 'tests', color: '#7ED957' },
+  { icon: 'settings', label: 'Stel je profiel in', key: 'settings', color: '#F39C4D' },
+] as const;
 
 export function ConfirmationStep({ trialEndsAt, onChat, onTests, onSettings, onDone }: Props) {
-  const scale = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(0.8)).current;
   const fade = useRef(new Animated.Value(0)).current;
+  const handlers = { chat: onChat, tests: onTests, settings: onSettings };
 
   useEffect(() => {
-    Animated.sequence([
-      Animated.spring(scale, { toValue: 1, friction: 5, useNativeDriver: true }),
-      Animated.timing(fade, { toValue: 1, duration: 350, useNativeDriver: true }),
+    Animated.parallel([
+      Animated.spring(scale, { toValue: 1, useNativeDriver: true, damping: 14, stiffness: 140 }),
+      Animated.timing(fade, { toValue: 1, duration: 400, useNativeDriver: true }),
     ]).start();
   }, []);
 
-  const endDate = trialEndsAt
-    ? new Date(trialEndsAt).toLocaleDateString('nl-BE', { day: 'numeric', month: 'long' })
-    : null;
-
-  const handlers = [onChat, onTests, onSettings];
+  const trialStr = trialEndsAt ? new Date(trialEndsAt).toLocaleDateString('nl-BE', { day: 'numeric', month: 'long' }) : null;
 
   return (
     <SafeAreaView style={s.root}>
-      <View style={s.content}>
-        <Animated.View style={[s.checkWrap, { transform: [{ scale }] }]}>
-          <View style={s.haloOuter}>
-            <View style={s.haloInner}>
-              <Feather name="check" size={26} color={OB.accent} />
-            </View>
-          </View>
-        </Animated.View>
+      <Animated.View style={[s.content, { opacity: fade }]}>
+        <View style={s.hero}>
+          <Animated.View style={[s.checkCircle, { transform: [{ scale }] }]}>
+            <Feather name="check" size={32} color="#fff" />
+          </Animated.View>
+          <Text style={s.headline}>Je bent er klaar voor</Text>
+          <Text style={s.subtext}>
+            {trialStr ? `Je Plus-trial loopt tot ${trialStr}.` : `Welkom bij ${APP_NAME}.`}
+          </Text>
+        </View>
 
-        <Animated.View style={{ opacity: fade, width: '100%' }}>
-          <Text style={s.headline}>Je bent klaar</Text>
+        <View style={s.actions}>
+          <Text style={s.actionsLabel}>Waar wil je beginnen?</Text>
+          {ACTIONS.map((a) => (
+            <TouchableOpacity key={a.key} style={[s.actionRow, { borderColor: a.color + '30', backgroundColor: a.color + '08' }]} onPress={handlers[a.key]} activeOpacity={0.8}>
+              <View style={[s.actionIcon, { backgroundColor: a.color + '20' }]}>
+                <Feather name={a.icon as any} size={18} color={a.color} />
+              </View>
+              <Text style={s.actionText}>{a.label}</Text>
+              <Feather name="arrow-right" size={16} color={a.color} />
+            </TouchableOpacity>
+          ))}
+        </View>
 
-          {endDate ? (
-            <Text style={s.subtext}>
-              Je 14-daagse trial loopt. Eerste betaling op {endDate}.
-            </Text>
-          ) : (
-            <Text style={s.subtext}>
-              Ga verder waar je was, of begin iets nieuws.
-            </Text>
-          )}
-
-          <View style={s.cards}>
-            {NEXT_STEPS.map((step, i) => (
-              <TouchableOpacity key={i} style={s.card} onPress={handlers[i]} activeOpacity={0.75}>
-                <View style={s.cardIcon}>
-                  <Feather name={step.icon} size={16} color={OB.accent} />
-                </View>
-                <View style={s.cardBody}>
-                  <Text style={s.cardTitle}>{step.title}</Text>
-                  <Text style={s.cardDesc}>{step.desc}</Text>
-                </View>
-                <Feather name="chevron-right" size={15} color={OB.textFaint} />
-              </TouchableOpacity>
-            ))}
-          </View>
-        </Animated.View>
-      </View>
-
-      <View style={s.ctaWrap}>
-        <TouchableOpacity style={s.cta} onPress={onDone} activeOpacity={0.85}>
-          <Text style={s.ctaText}>Begin met {APP_NAME}</Text>
-          <Feather name="arrow-right" size={17} color={OB.inverse} />
+        <TouchableOpacity style={s.skipBtn} onPress={onDone}>
+          <Text style={s.skipText}>Direct naar de app</Text>
         </TouchableOpacity>
-      </View>
+      </Animated.View>
     </SafeAreaView>
   );
 }
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: OB.bg },
-  content: { flex: 1, paddingHorizontal: 24, paddingTop: 24, alignItems: 'center' },
-  checkWrap: { marginBottom: 18 },
-  haloOuter: {
-    width: 80, height: 80, borderRadius: 40,
-    borderWidth: 1, borderColor: OB.accent + '22', backgroundColor: OB.accentSoft,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  haloInner: {
-    width: 56, height: 56, borderRadius: 28,
-    borderWidth: 1, borderColor: OB.accent + '55', backgroundColor: OB.bg,
-    alignItems: 'center', justifyContent: 'center',
+  content: { flex: 1, paddingHorizontal: 24, paddingTop: 20, paddingBottom: 16 },
+  hero: { alignItems: 'center', marginBottom: 32 },
+  checkCircle: {
+    width: 72, height: 72, borderRadius: 36, backgroundColor: OB.green,
+    alignItems: 'center', justifyContent: 'center', marginBottom: 20,
+    ...Platform.select({ ios: { shadowColor: OB.green, shadowOpacity: 0.35, shadowRadius: 20, shadowOffset: { width: 0, height: 6 } }, android: { elevation: 6 } }),
   },
   headline: {
-    fontSize: 28, fontWeight: '500', color: OB.textPrimary,
-    lineHeight: 34, marginBottom: 8, textAlign: 'center',
-    fontStyle: 'italic',
-    fontFamily: Platform.select({ ios: OBFonts.serif, android: 'serif' }),
-    letterSpacing: -0.4,
+    fontSize: 26, fontWeight: '700', color: OB.textPrimary, textAlign: 'center', letterSpacing: -0.4, marginBottom: 10,
+    fontFamily: Platform.select({ ios: 'Nunito', android: 'sans-serif', default: 'system-ui' }),
   },
-  subtext: {
-    fontSize: 14, color: OB.textMuted, lineHeight: 20,
-    textAlign: 'center', marginBottom: 24, paddingHorizontal: 12,
-  },
-  cards: { gap: 8, width: '100%' },
-  card: {
-    backgroundColor: OB.surface, borderWidth: 0.5, borderColor: OB.border,
-    borderRadius: 12, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 12,
-  },
-  cardIcon: {
-    width: 34, height: 34, borderRadius: 10,
-    backgroundColor: OB.accentSoft, alignItems: 'center', justifyContent: 'center',
-  },
-  cardBody: { flex: 1 },
-  cardTitle: { fontSize: 14, fontWeight: '600', color: OB.textPrimary },
-  cardDesc: { fontSize: 12.5, color: OB.textMuted, marginTop: 1 },
-  ctaWrap: { paddingHorizontal: 24, paddingBottom: 16, paddingTop: 6 },
-  cta: {
-    height: 52, borderRadius: 14, backgroundColor: OB.accent,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9,
-    ...Platform.select({
-      ios: { shadowColor: OB.accent, shadowOpacity: 0.35, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } },
-      android: { elevation: 3 },
-    }),
-  },
-  ctaText: { fontSize: 15.5, fontWeight: '700', color: OB.inverse, letterSpacing: 0.1 },
+  subtext: { fontSize: 14.5, color: OB.textMuted, textAlign: 'center', lineHeight: 21, maxWidth: 300 },
+  actions: { gap: 10, flex: 1 },
+  actionsLabel: { fontSize: 11.5, fontWeight: '600', letterSpacing: 0.5, textTransform: 'uppercase', color: OB.textMuted, marginBottom: 4 },
+  actionRow: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16, borderRadius: 14, borderWidth: 0.5 },
+  actionIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  actionText: { flex: 1, fontSize: 15, fontWeight: '500', color: OB.textPrimary },
+  skipBtn: { alignItems: 'center', paddingVertical: 14 },
+  skipText: { fontSize: 14, color: OB.textMuted, fontWeight: '500' },
 });
