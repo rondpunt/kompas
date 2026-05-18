@@ -4,8 +4,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { OB, OBFonts } from './ob-theme';
+import { OB } from './ob-theme';
 import { APP_NAME } from '@/src/config/branding';
+import { JunieLogo } from '@/src/components/JunieLogo';
 
 interface Props {
   onNext: () => void;
@@ -27,17 +28,9 @@ export function WelcomeStep({ onNext }: Props) {
   return (
     <SafeAreaView style={s.root}>
       <Animated.View style={[s.content, { opacity: fade }]}>
-        <View style={s.brandRow}>
-          <View style={s.dot} />
-          <Text style={s.brand}>{APP_NAME}</Text>
-        </View>
-
         <View style={s.center}>
-          <View style={s.haloOuter}>
-            <View style={s.haloInner}>
-              <Feather name="compass" size={28} color={OB.accent} />
-            </View>
-          </View>
+          {/* Vijfkleurig Junie-woordmerk (hero) */}
+          <JunieLogo variant="multicolor" size={56} align="center" style={{ marginBottom: 18 }} />
 
           <Text style={s.headline}>Welkom bij {APP_NAME}</Text>
           <Text style={s.body}>
@@ -48,7 +41,7 @@ export function WelcomeStep({ onNext }: Props) {
             {FEATURES.map((f) => (
               <View key={f.label} style={s.feat}>
                 <View style={s.featIcon}>
-                  <Feather name={f.icon} size={13} color={OB.accent} />
+                  <Feather name={f.icon} size={14} color={OB.accent} />
                 </View>
                 <Text style={s.featText}>{f.label}</Text>
               </View>
@@ -71,46 +64,32 @@ export function WelcomeStep({ onNext }: Props) {
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: OB.bg },
   content: { flex: 1, paddingHorizontal: 24, paddingTop: 12, paddingBottom: 16 },
-  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 7, paddingVertical: 8 },
-  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: OB.textPrimary },
-  brand: { fontSize: 15, fontWeight: '600', color: OB.textPrimary, letterSpacing: -0.3 },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 14 },
-  haloOuter: {
-    width: 92, height: 92, borderRadius: 46,
-    borderWidth: 1, borderColor: OB.accent + '22', backgroundColor: OB.accentSoft,
-    alignItems: 'center', justifyContent: 'center', marginBottom: 4,
-  },
-  haloInner: {
-    width: 64, height: 64, borderRadius: 32,
-    borderWidth: 1, borderColor: OB.accent + '55', backgroundColor: OB.bg,
-    alignItems: 'center', justifyContent: 'center',
-  },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
   headline: {
-    fontSize: 28, fontWeight: '500', color: OB.textPrimary,
-    fontStyle: 'italic',
-    fontFamily: Platform.select({ ios: OBFonts.serif, android: 'serif' }),
+    fontSize: 28, fontWeight: '700', color: OB.textPrimary,
+    fontFamily: Platform.select({ ios: 'Nunito', android: 'sans-serif', default: 'system-ui' }),
     letterSpacing: -0.4, textAlign: 'center',
   },
   body: {
-    fontSize: 14.5, lineHeight: 21, color: OB.textMuted,
-    textAlign: 'center', maxWidth: 320, paddingHorizontal: 12, marginBottom: 4,
+    fontSize: 15, lineHeight: 22, color: OB.textMuted,
+    textAlign: 'center', maxWidth: 320, paddingHorizontal: 12, marginBottom: 6,
   },
-  features: { width: '100%', maxWidth: 320, gap: 10, marginTop: 6 },
-  feat: { flexDirection: 'row', alignItems: 'center', gap: 11 },
+  features: { width: '100%', maxWidth: 320, gap: 12, marginTop: 8 },
+  feat: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   featIcon: {
-    width: 28, height: 28, borderRadius: 8,
+    width: 30, height: 30, borderRadius: 8,
     backgroundColor: OB.accentSoft, alignItems: 'center', justifyContent: 'center',
   },
-  featText: { fontSize: 13.5, color: OB.textSecondary, flex: 1, lineHeight: 19 },
+  featText: { fontSize: 14, color: OB.textSecondary, flex: 1, lineHeight: 19 },
   bottom: { gap: 10 },
   cta: {
-    height: 52, borderRadius: 14, backgroundColor: OB.accent,
+    height: 52, borderRadius: 8, backgroundColor: OB.accent,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9,
     ...Platform.select({
-      ios: { shadowColor: OB.accent, shadowOpacity: 0.35, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } },
+      ios: { shadowColor: OB.accent, shadowOpacity: 0.28, shadowRadius: 14, shadowOffset: { width: 0, height: 4 } },
       android: { elevation: 3 },
     }),
   },
-  ctaText: { fontSize: 15.5, fontWeight: '700', color: OB.inverse, letterSpacing: 0.1 },
-  privacy: { textAlign: 'center', fontSize: 11, color: OB.textFaint, letterSpacing: 0.3 },
+  ctaText: { fontSize: 16, fontWeight: '600', color: OB.inverse, letterSpacing: 0.1 },
+  privacy: { textAlign: 'center', fontSize: 11.5, color: OB.textFaint, letterSpacing: 0.3 },
 });

@@ -6,6 +6,9 @@ import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import { useTheme } from "@/src/theme/ThemeContext";
 import { api } from "@/src/api/client";
 import { PlusModal, PlusReason } from "@/src/components/PlusModal";
+import { Button } from "@/src/components/ui/Button";
+import { Card } from "@/src/components/ui/Card";
+import { RADII, SPACING, TYPE, shadow } from "@/src/theme/tokens";
 
 interface ResultDoc {
   id: string;
@@ -135,14 +138,20 @@ export default function TestResult() {
         </Text>
 
         {result.subscales && Object.keys(result.subscales).length > 0 && (
-          <View style={[styles.subscaleBox, { backgroundColor: palette.surfaceElevated, borderColor: palette.borderSubtle }]}>
-            {Object.entries(result.subscales).map(([k, v]) => (
-              <View key={k} style={styles.subscaleRow}>
+          <Card style={styles.subscaleCard} padding={14}>
+            {Object.entries(result.subscales).map(([k, v], i, arr) => (
+              <View
+                key={k}
+                style={[
+                  styles.subscaleRow,
+                  i < arr.length - 1 && { borderBottomWidth: 0.5, borderBottomColor: palette.borderSubtle },
+                ]}
+              >
                 <Text style={[styles.subscaleLabel, { color: palette.textMuted }]}>{k}</Text>
                 <Text style={[styles.subscaleValue, { color: palette.textPrimary }]}>{String(v)}</Text>
               </View>
             ))}
-          </View>
+          </Card>
         )}
 
         <View style={styles.narrativeBlock}>
@@ -166,12 +175,10 @@ export default function TestResult() {
           testID="result-memory"
           onPress={() => setPlusModal("memory")}
           activeOpacity={0.75}
-          style={[styles.secondaryBtn, { borderColor: palette.borderDefault }]}
+          style={[styles.lockRow, { backgroundColor: palette.surfaceElevated, borderColor: palette.borderSubtle }]}
         >
-          <Feather name="bookmark" size={15} color={palette.textPrimary} />
-          <Text style={[styles.secondaryBtnText, { color: palette.textPrimary }]}>
-            Bewaar in geheugen
-          </Text>
+          <Feather name="bookmark" size={15} color={palette.textSecondary} />
+          <Text style={[styles.lockRowText, { color: palette.textPrimary }]}>Bewaar in geheugen</Text>
           <View style={[styles.plusBadge, { backgroundColor: palette.accent }]}>
             <Text style={styles.plusBadgeText}>PLUS</Text>
           </View>
@@ -180,25 +187,23 @@ export default function TestResult() {
           testID="result-pdf"
           onPress={() => setPlusModal("pdf")}
           activeOpacity={0.75}
-          style={[styles.secondaryBtn, { borderColor: palette.borderDefault }]}
+          style={[styles.lockRow, { backgroundColor: palette.surfaceElevated, borderColor: palette.borderSubtle }]}
         >
-          <Feather name="download" size={15} color={palette.textPrimary} />
-          <Text style={[styles.secondaryBtnText, { color: palette.textPrimary }]}>
-            PDF voor therapeut
-          </Text>
+          <Feather name="download" size={15} color={palette.textSecondary} />
+          <Text style={[styles.lockRowText, { color: palette.textPrimary }]}>PDF voor therapeut</Text>
           <View style={[styles.plusBadge, { backgroundColor: palette.accent }]}>
             <Text style={styles.plusBadgeText}>PLUS</Text>
           </View>
         </TouchableOpacity>
-        <TouchableOpacity
+        <Button
           testID="result-close"
+          label="Opslaan en sluiten"
           onPress={() => router.replace("/zelftesten")}
-          style={[styles.primaryBtn, { backgroundColor: palette.textPrimary }]}
-        >
-          <Text style={[styles.primaryBtnText, { color: palette.inversePrimary }]}>
-            Opslaan en sluiten
-          </Text>
-        </TouchableOpacity>
+          variant="primary"
+          size="md"
+          iconRight="check"
+          fullWidth
+        />
       </View>
 
       <PlusModal
@@ -265,31 +270,29 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: "center",
   },
-  subscaleBox: {
+  subscaleCard: {
     alignSelf: "stretch",
     marginTop: 22,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 0.5,
   },
   subscaleRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingVertical: 6,
+    alignItems: "center",
+    paddingVertical: 10,
   },
   subscaleLabel: {
-    fontSize: 12.5,
+    fontSize: 13,
   },
   subscaleValue: {
-    fontSize: 13,
-    fontWeight: "500",
+    fontSize: 13.5,
+    fontWeight: "600",
   },
   narrativeBlock: {
     marginTop: 24,
     alignSelf: "stretch",
   },
   narrativeText: {
-    fontSize: 13.5,
+    fontSize: 14,
     lineHeight: 22,
   },
   narrativeLoading: {
@@ -308,29 +311,17 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     gap: 9,
   },
-  primaryBtn: {
+  lockRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
     height: 46,
-    borderRadius: 13,
-    gap: 8,
-  },
-  primaryBtnText: {
-    color: "#ffffff",
-    fontSize: 15,
-    fontWeight: "500",
-  },
-  secondaryBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    height: 44,
-    borderRadius: 13,
+    borderRadius: RADII.md,
     borderWidth: 0.5,
-    gap: 8,
+    paddingHorizontal: 14,
+    gap: 10,
   },
-  secondaryBtnText: {
+  lockRowText: {
+    flex: 1,
     fontSize: 14,
     fontWeight: "500",
   },

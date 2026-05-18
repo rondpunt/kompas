@@ -182,7 +182,7 @@ export default function Settings() {
             <Text style={[styles.rowLabel, { color: palette.textPrimary }]}>Thema</Text>
             <View style={[styles.themePill, { backgroundColor: palette.accentSoft }]}>
               <View style={[styles.themeDot, { backgroundColor: palette.accent }]} />
-              <Text style={[styles.themePillText, { color: palette.textPrimary }]}>Dark</Text>
+              <Text style={[styles.themePillText, { color: palette.textPrimary }]}>Light</Text>
             </View>
           </View>
         </Section>

@@ -1,29 +1,27 @@
-// Onboarding design tokens — Junie v3 premium dark (mirrors main NIGHT palette)
-// Single source of truth voor onboarding visuals.
-
+// Onboarding design tokens — Junie v4 light (ChatGPT-witte basis).
 export const OB = {
-  bg: '#1A1A1A',
-  surface: '#242424',
-  elevated: '#2C2C2C',
-  border: 'rgba(255,255,255,0.08)',
-  borderSubtle: 'rgba(255,255,255,0.05)',
+  bg: '#FFFFFF',
+  surface: '#F9FAFB',
+  elevated: '#FFFFFF',
+  border: '#E5E7EB',
+  borderSubtle: '#F3F4F6',
   borderFocus: '#4A90E2',
-  textPrimary: '#ECECEC',
-  textSecondary: '#B8B8B8',
-  textMuted: '#8E8E8E',
-  textFaint: '#5E5E5E',
+  textPrimary: '#111111',
+  textSecondary: '#374151',
+  textMuted: '#6B7280',
+  textFaint: '#9CA3AF',
   accent: '#4A90E2',
-  accentLight: '#5BA0F0',
-  accentHover: '#6BACF5',
-  accentSoft: 'rgba(74,144,226,0.15)',
+  accentLight: '#5BA3F0',
+  accentHover: '#3A7FCC',
+  accentSoft: 'rgba(74,144,226,0.08)',
   success: '#7ED957',
-  successBg: 'rgba(126,217,87,0.12)',
-  danger: '#E85D5D',
+  successBg: '#ECFDF5',
+  danger: '#E85A5A',
   white: '#FFFFFF',
   inverse: '#FFFFFF', // tekst op blauwe knoppen
 } as const;
 
 export const OBFonts = {
-  serif: 'Georgia',
+  brand: 'Nunito',
   sans: undefined,
 } as const;

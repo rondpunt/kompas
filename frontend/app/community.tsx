@@ -27,14 +27,14 @@ interface Channel {
 }
 
 const CHANNELS: Channel[] = [
-  { id: "adhd", label: "ADHD", hint: "Concentratie, prikkels, ritme", iconLib: "Feather", iconName: "zap", bgNight: "#581c87", fgNight: "#d8b4fe" },
-  { id: "autisme", label: "Autisme", hint: "Patronen, sociaal, prikkels", iconLib: "Feather", iconName: "layers", bgNight: "#134e4a", fgNight: "#5eead4" },
-  { id: "burnout", label: "Burn-out", hint: "Werk, herstellen, grenzen", iconLib: "Feather", iconName: "battery", bgNight: "#7c2d12", fgNight: "#fdba74" },
-  { id: "depressie", label: "Depressie", hint: "Donkere periodes, motivatie", iconLib: "Feather", iconName: "cloud-rain", bgNight: "#451a03", fgNight: "#fcd34d" },
-  { id: "angst", label: "Angst", hint: "Piekeren, paniek, ademen", iconLib: "Feather", iconName: "wind", bgNight: "#1e3a8a", fgNight: "#93c5fd" },
-  { id: "hsp", label: "Hooggevoelig", hint: "Prikkels, energie, rust", iconLib: "Feather", iconName: "feather", bgNight: "#831843", fgNight: "#f9a8d4" },
-  { id: "verlies", label: "Verlies", hint: "Rouw, gemis, herinneren", iconLib: "MaterialCommunityIcons", iconName: "weather-cloudy", bgNight: "#1f2937", fgNight: "#d1d5db" },
-  { id: "relaties", label: "Relaties", hint: "Partner, ouders, vrienden", iconLib: "Feather", iconName: "users", bgNight: "#1e40af", fgNight: "#bfdbfe" },
+  { id: "adhd",     label: "ADHD",          hint: "Concentratie, prikkels, ritme",   iconLib: "Feather",                 iconName: "zap",          bgNight: "rgba(243,156,77,0.12)",  fgNight: "#F39C4D" },
+  { id: "autisme",  label: "Autisme",       hint: "Patronen, sociaal, prikkels",     iconLib: "Feather",                 iconName: "layers",       bgNight: "rgba(126,217,87,0.14)",  fgNight: "#5DAE3F" },
+  { id: "burnout",  label: "Burn-out",      hint: "Werk, herstellen, grenzen",       iconLib: "Feather",                 iconName: "battery",      bgNight: "rgba(232,90,90,0.10)",   fgNight: "#E85A5A" },
+  { id: "depressie",label: "Depressie",     hint: "Donkere periodes, motivatie",     iconLib: "Feather",                 iconName: "cloud-rain",   bgNight: "rgba(74,144,226,0.10)",  fgNight: "#4A90E2" },
+  { id: "angst",    label: "Angst",         hint: "Piekeren, paniek, ademen",        iconLib: "Feather",                 iconName: "wind",         bgNight: "rgba(91,163,240,0.14)",  fgNight: "#3A7FCC" },
+  { id: "hsp",      label: "Hooggevoelig",  hint: "Prikkels, energie, rust",         iconLib: "Feather",                 iconName: "feather",      bgNight: "rgba(245,200,75,0.16)",  fgNight: "#C99A1F" },
+  { id: "verlies",  label: "Verlies",       hint: "Rouw, gemis, herinneren",         iconLib: "MaterialCommunityIcons",  iconName: "weather-cloudy", bgNight: "rgba(107,114,128,0.10)", fgNight: "#6B7280" },
+  { id: "relaties", label: "Relaties",      hint: "Partner, ouders, vrienden",       iconLib: "Feather",                 iconName: "users",        bgNight: "rgba(232,90,90,0.10)",   fgNight: "#E85A5A" },
 ];
 
 const FILTERS = [{ id: "all", label: "Alles" }, ...CHANNELS.map((c) => ({ id: c.id, label: c.label }))] as const;

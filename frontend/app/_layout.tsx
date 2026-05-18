@@ -3,28 +3,27 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { ThemeProvider, useTheme } from "@/src/theme/ThemeContext";
+import { View } from "react-native";
+import { ThemeProvider } from "@/src/theme/ThemeContext";
 import { AuthProvider } from "@/src/auth/AuthContext";
-
-function StatusBarThemed() {
-  const { theme } = useTheme();
-  return <StatusBar style={theme === "night" ? "light" : "dark"} />;
-}
+import { LAYERS } from "@/src/theme/tokens";
 
 export default function RootLayout() {
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: LAYERS.canvas }}>
       <SafeAreaProvider>
         <ThemeProvider>
           <AuthProvider>
-            <StatusBarThemed />
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                animation: "fade",
-                contentStyle: { backgroundColor: "transparent" },
-              }}
-            />
+            <StatusBar style="dark" />
+            <View style={{ flex: 1, backgroundColor: LAYERS.canvas }}>
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  animation: "fade",
+                  contentStyle: { backgroundColor: LAYERS.canvas },
+                }}
+              />
+            </View>
           </AuthProvider>
         </ThemeProvider>
       </SafeAreaProvider>

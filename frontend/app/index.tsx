@@ -350,16 +350,8 @@ export default function ChatScreen() {
                 testID={`message-${m.role}`}
               >
                 {m.role === "user" ? (
-                  <View
-                    style={[
-                      styles.userBubble,
-                      {
-                        backgroundColor: palette.surfaceElevated,
-                        borderColor: palette.borderSubtle,
-                      },
-                    ]}
-                  >
-                    <Text style={[styles.bodyText, { color: palette.textPrimary }]}>{m.content}</Text>
+                  <View style={styles.userBubble}>
+                    <Text style={[styles.bodyText, { color: "#FFFFFF" }]}>{m.content}</Text>
                   </View>
                 ) : (
                   <View style={styles.assistantBlock}>
@@ -664,11 +656,23 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
   },
   userBubble: {
-    maxWidth: "85%",
+    maxWidth: "75%",
+    backgroundColor: "#4A90E2",
     paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 22,
-    borderWidth: 0.5,
+    paddingHorizontal: 16,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    borderBottomLeftRadius: 18,
+    borderBottomRightRadius: 4,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#4A90E2",
+        shadowOpacity: 0.18,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 2 },
+      },
+      android: { elevation: 1 },
+    }),
   },
   assistantBlock: {
     maxWidth: "96%",

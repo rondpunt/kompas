@@ -7,7 +7,6 @@ import {
   View,
   ViewStyle,
   StyleProp,
-  Platform,
   GestureResponderEvent,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -15,10 +14,9 @@ import { Feather } from "@expo/vector-icons";
 import {
   BRAND,
   BORDER,
-  LAYERS,
   RADII,
   TEXT,
-  RAINBOW_GRADIENT,
+  JUNIE_GRADIENT,
   glowBlue,
   shadow,
 } from "@/src/theme/tokens";
@@ -41,14 +39,10 @@ interface Props {
   children?: React.ReactNode;
 }
 
-const HEIGHT_MAP: Record<Size, number> = { sm: 36, md: 48, lg: 54 };
+const HEIGHT_MAP: Record<Size, number> = { sm: 36, md: 44, lg: 52 };
 const PAD_X_MAP: Record<Size, number> = { sm: 14, md: 20, lg: 24 };
-const FS_MAP: Record<Size, number> = { sm: 13, md: 15, lg: 16 };
+const FS_MAP: Record<Size, number> = { sm: 14, md: 15, lg: 16 };
 
-/**
- * Premium button met inner-highlight + 2-layer shadow + gradient.
- * Volg vier states: rust → hover → active → disabled (mobiel = touch, active via opacity).
- */
 export function Button({
   label,
   onPress,
@@ -66,7 +60,7 @@ export function Button({
   const height = HEIGHT_MAP[size];
   const pad = PAD_X_MAP[size];
   const fs = FS_MAP[size];
-  const radius = size === "sm" ? RADII.sm : RADII.md;
+  const radius = RADII.sm; // 8px (chatgpt-stijl knoppen)
 
   const isInert = disabled || loading;
 
@@ -86,18 +80,16 @@ export function Button({
     </View>
   );
 
-  // Outer wrapping
   const outerStyle: StyleProp<ViewStyle> = [
     {
       height,
       borderRadius: radius,
       overflow: "hidden",
-      opacity: disabled ? 0.4 : 1,
+      opacity: disabled ? 0.6 : 1,
     },
     fullWidth ? { alignSelf: "stretch" } : null,
     variant === "primary" ? glowBlue("soft") : null,
     variant === "rainbow" ? glowBlue("strong") : null,
-    variant === "secondary" || variant === "tertiary" ? null : shadow("xs"),
     style,
   ];
 
@@ -114,10 +106,8 @@ export function Button({
           colors={[BRAND.blueLight, BRAND.blue]}
           start={{ x: 0, y: 0 }}
           end={{ x: 0, y: 1 }}
-          style={[StyleSheet.absoluteFillObject]}
+          style={StyleSheet.absoluteFillObject}
         />
-        {/* inner-highlight bovenaan */}
-        <View pointerEvents="none" style={styles.innerHighlight} />
         {InnerContent}
       </TouchableOpacity>
     );
@@ -133,12 +123,11 @@ export function Button({
         style={outerStyle}
       >
         <LinearGradient
-          colors={RAINBOW_GRADIENT as unknown as readonly [string, string, ...string[]]}
+          colors={JUNIE_GRADIENT as unknown as readonly [string, string, ...string[]]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          style={[StyleSheet.absoluteFillObject]}
+          style={StyleSheet.absoluteFillObject}
         />
-        <View pointerEvents="none" style={styles.innerHighlight} />
         {InnerContent}
       </TouchableOpacity>
     );
@@ -148,19 +137,18 @@ export function Button({
     return (
       <TouchableOpacity
         testID={testID}
-        activeOpacity={isInert ? 1 : 0.7}
+        activeOpacity={isInert ? 1 : 0.75}
         onPress={isInert ? undefined : onPress}
         disabled={isInert}
         style={[
           outerStyle,
           {
-            backgroundColor: "rgba(255,255,255,0.04)",
-            borderWidth: 1,
-            borderColor: BORDER.default,
+            backgroundColor: "transparent",
+            borderWidth: 1.5,
+            borderColor: BRAND.blue,
           },
         ]}
       >
-        <View pointerEvents="none" style={styles.innerHighlightSubtle} />
         {InnerContent}
       </TouchableOpacity>
     );
@@ -173,18 +161,14 @@ export function Button({
         activeOpacity={isInert ? 1 : 0.85}
         onPress={isInert ? undefined : onPress}
         disabled={isInert}
-        style={[
-          outerStyle,
-          { backgroundColor: BRAND.red },
-        ]}
+        style={[outerStyle, { backgroundColor: BRAND.coral }]}
       >
-        <View pointerEvents="none" style={styles.innerHighlight} />
         {InnerContent}
       </TouchableOpacity>
     );
   }
 
-  // tertiary
+  // tertiary — text only
   return (
     <TouchableOpacity
       testID={testID}
@@ -203,7 +187,9 @@ function textColor(v: Variant): string {
     case "primary":
     case "rainbow":
     case "danger":
-      return "#ffffff";
+      return "#FFFFFF";
+    case "secondary":
+      return BRAND.blue;
     default:
       return TEXT.primary;
   }
@@ -224,21 +210,5 @@ const styles = StyleSheet.create({
   label: {
     fontWeight: "600",
     letterSpacing: 0.1,
-  },
-  innerHighlight: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: "rgba(255,255,255,0.18)",
-  },
-  innerHighlightSubtle: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: BORDER.topHighlight,
   },
 });

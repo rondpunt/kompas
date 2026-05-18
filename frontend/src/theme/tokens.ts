@@ -1,91 +1,107 @@
-// Junie Design System v3 — Premium Dark
-// Single source of truth voor alle UI tokens.
-// Doctrine: Soft-tactile minimalism. Lagen, geen vlakken. Niets schreeuwt.
+// Junie Design System v4 — ChatGPT-witte basis met volle Junie merkintegratie.
+// Single source of truth.
 
 import { Platform } from "react-native";
 
 /* ──────────────────────────────────────────────────────────────────────────
-   Lagensysteem (Layer 0..4)
-   Elk element zit op een hoogtelaag t.o.v. de canvas-achtergrond.
+   Canvas & Lagen (LIGHT)
    ────────────────────────────────────────────────────────────────────────── */
 export const LAYERS = {
-  canvas: "#1A1A1A",           // L0 — app-achtergrond
-  panel: "#141414",            // L1 — sidebar / panelen (dieper, ingebed)
-  card: "#242424",             // L2 — cards, inputs, modals
-  cardGradientTop: "#262626",  // L2 subtle gradient top (premium feel)
-  cardGradientBottom: "#222222",
-  popover: "#2C2C2C",          // L3 — dropdowns, tooltips
-  chatInput: "#2A2A2A",        // chat-input verheven oppervlak
-  modalOverlay: "rgba(0,0,0,0.55)", // backdrop achter modal (mag blur hebben)
+  canvas: "#FFFFFF",          // hoofd-achtergrond
+  sidebar: "#F5F5F5",         // sidebar / panelen
+  sidebarHover: "#EBEBEB",
+  card: "#FFFFFF",            // cards op canvas
+  surface: "#FFFFFF",         // modals, dropdowns
+  surfaceHover: "#F9FAFB",
+  interactiveHover: "#F9FAFB",
+  interactivePressed: "#F3F4F6",
+  modalOverlay: "rgba(0,0,0,0.4)",
 } as const;
 
 /* ──────────────────────────────────────────────────────────────────────────
    Tekst & borders
    ────────────────────────────────────────────────────────────────────────── */
 export const TEXT = {
-  primary: "#ECECEC",
-  secondary: "#B8B8B8",
-  muted: "#8E8E8E",
-  faint: "#5E5E5E",
-  placeholder: "#7E7E7E",
-  inverse: "#0F0F0F", // tekst op kleurrijke knoppen
+  primary: "#111111",         // hoofd-tekst (niet puur zwart)
+  secondary: "#6B7280",       // labels, metadata
+  tertiary: "#9CA3AF",        // placeholders
+  faint: "#9CA3AF",
+  inverse: "#FFFFFF",         // tekst op gekleurde knoppen
+  placeholder: "#9CA3AF",
 } as const;
 
 export const BORDER = {
-  subtle: "rgba(255,255,255,0.05)",
-  default: "rgba(255,255,255,0.08)",
-  hover: "rgba(255,255,255,0.12)",
-  emphasis: "rgba(255,255,255,0.16)",
-  topHighlight: "rgba(255,255,255,0.06)", // inner highlight bovenaan L2/L3
+  subtle: "#E5E7EB",
+  default: "#E5E7EB",
+  medium: "#D1D5DB",
+  strong: "#9CA3AF",
+  topHighlight: "rgba(0,0,0,0.04)",
 } as const;
 
 /* ──────────────────────────────────────────────────────────────────────────
-   Kleurensysteem — Junie multicolor brand
+   Junie merkkleuren (vijf primaire kleuren met semantische betekenis)
    ────────────────────────────────────────────────────────────────────────── */
 export const BRAND = {
-  blue: "#4A90E2",       // Primair CTA
-  blueLight: "#5BA0F0",  // Hover top stop
+  blue: "#4A90E2",     // Primaire CTA, vertrouwen
+  blueLight: "#5BA3F0",
   blueHover: "#6BACF5",
-  blueDark: "#3A7BC8",
-  blueAlpha10: "rgba(74,144,226,0.10)",
+  blueDark: "#3A7FCC",
+  blueAlpha08: "rgba(74,144,226,0.08)",
   blueAlpha15: "rgba(74,144,226,0.15)",
-  blueAlpha20: "rgba(74,144,226,0.20)",
-  blueAlpha30: "rgba(74,144,226,0.30)",
-  green: "#7ED957",
-  yellow: "#F5C84B",
-  orange: "#F39C4D",
-  red: "#E85D5D",
+  blueAlpha25: "rgba(74,144,226,0.25)",
+  blueAlpha35: "rgba(74,144,226,0.35)",
+
+  green: "#7ED957",    // Succes, groei
+  greenAlpha15: "rgba(126,217,87,0.15)",
+  greenAlpha25: "rgba(126,217,87,0.25)",
+
+  yellow: "#F5C84B",   // Inzichten, nieuwe info
+  yellowAlpha15: "rgba(245,200,75,0.15)",
+
+  orange: "#F39C4D",   // Energie, streaks
+  orangeAlpha15: "rgba(243,156,77,0.15)",
+
+  coral: "#E85A5A",    // Community, empathie
+  coralAlpha15: "rgba(232,90,90,0.15)",
 } as const;
 
-/* Multicolor CTA gradient (max één per scherm) */
-export const RAINBOW_GRADIENT: readonly string[] = [
-  "#4A90E2",
-  "#7ED957",
-  "#F5C84B",
-  "#F39C4D",
-] as const;
+/* Multicolor Junie gradient (woordmerk, hero, onboarding) */
+export const JUNIE_GRADIENT: readonly string[] = [
+  BRAND.blue,
+  BRAND.green,
+  BRAND.yellow,
+  BRAND.orange,
+  BRAND.coral,
+];
 
 /* ──────────────────────────────────────────────────────────────────────────
-   Status-kleuren (alleen voor feedback)
+   Status-kleuren (semantisch, gebaseerd op merk)
    ────────────────────────────────────────────────────────────────────────── */
 export const STATUS = {
-  success: "#7ED957",
-  successBg: "rgba(126,217,87,0.12)",
-  warning: "#F5C84B",
-  warningBg: "rgba(245,200,75,0.12)",
-  danger: "#E85D5D",
-  dangerBg: "rgba(232,93,93,0.12)",
+  successBg: "#ECFDF5",
+  successBorder: BRAND.green,
+  successText: "#047857",
+  warningBg: "#FEF3C7",
+  warningBorder: BRAND.orange,
+  warningText: "#92400E",
+  dangerBg: "#FEF2F2",
+  dangerBorder: "#EF4444",
+  dangerText: "#991B1B",
+  infoBg: "#EFF6FF",
+  infoBorder: BRAND.blue,
+  infoText: "#1E40AF",
 } as const;
 
 /* ──────────────────────────────────────────────────────────────────────────
-   Border radii (vaste schaal — gebruik nooit afwijkende waarden)
+   Border radii
    ────────────────────────────────────────────────────────────────────────── */
 export const RADII = {
-  xs: 8,    // pills, badges, tags
-  sm: 10,   // kleine inputs
-  md: 14,   // knoppen, dropdowns, menu-items
-  lg: 18,   // cards, kleine modals
-  xl: 24,   // chat-input, grote modals, bubbles
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
+  xxl: 24,
   pill: 999,
 } as const;
 
@@ -93,10 +109,7 @@ export const RADII = {
    Spacing (4px grid)
    ────────────────────────────────────────────────────────────────────────── */
 export const SPACING = {
-  px: 1,
-  "0.5": 2,
   "1": 4,
-  "1.5": 6,
   "2": 8,
   "3": 12,
   "4": 16,
@@ -109,19 +122,18 @@ export const SPACING = {
 } as const;
 
 /* ──────────────────────────────────────────────────────────────────────────
-   Schaduwsysteem (4 niveaus, altijd 2-laags)
-   React Native: gebruik shadowColor/shadowOpacity/shadowRadius/shadowOffset
+   Schaduwsysteem
    ────────────────────────────────────────────────────────────────────────── */
 export const shadow = (
   level: "xs" | "sm" | "md" | "lg" | "xl",
   color: string = "#000",
 ) => {
   const map: Record<string, { opacity: number; radius: number; offsetY: number; elevation: number }> = {
-    xs: { opacity: 0.20, radius: 2, offsetY: 1, elevation: 1 },
-    sm: { opacity: 0.30, radius: 12, offsetY: 4, elevation: 2 },
-    md: { opacity: 0.35, radius: 24, offsetY: 12, elevation: 6 },
-    lg: { opacity: 0.40, radius: 48, offsetY: 24, elevation: 10 },
-    xl: { opacity: 0.50, radius: 80, offsetY: 32, elevation: 18 },
+    xs: { opacity: 0.05, radius: 2, offsetY: 1, elevation: 1 },
+    sm: { opacity: 0.08, radius: 6, offsetY: 2, elevation: 2 },
+    md: { opacity: 0.10, radius: 12, offsetY: 4, elevation: 4 },
+    lg: { opacity: 0.14, radius: 24, offsetY: 10, elevation: 8 },
+    xl: { opacity: 0.20, radius: 40, offsetY: 16, elevation: 14 },
   };
   const c = map[level];
   return Platform.select({
@@ -136,16 +148,15 @@ export const shadow = (
   }) as object;
 };
 
-/* Gekleurde glow (voor CTA-knoppen) */
 export const glowBlue = (intensity: "soft" | "strong" = "soft") =>
   Platform.select({
     ios: {
       shadowColor: BRAND.blue,
-      shadowOpacity: intensity === "soft" ? 0.35 : 0.5,
-      shadowRadius: intensity === "soft" ? 16 : 28,
-      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: intensity === "soft" ? 0.25 : 0.35,
+      shadowRadius: intensity === "soft" ? 14 : 20,
+      shadowOffset: { width: 0, height: 4 },
     },
-    android: { elevation: intensity === "soft" ? 4 : 8 },
+    android: { elevation: intensity === "soft" ? 3 : 6 },
     default: {},
   }) as object;
 
@@ -153,52 +164,50 @@ export const glowBlue = (intensity: "soft" | "strong" = "soft") =>
    Typografie
    ────────────────────────────────────────────────────────────────────────── */
 export const FONTS = {
-  display: Platform.select({ ios: "Georgia", android: "serif", default: "Georgia" }),
-  body: Platform.select({ ios: "System", android: "sans-serif", default: "System" }),
-  mono: Platform.select({ ios: "Menlo", android: "monospace", default: "Menlo" }),
+  brand: Platform.select({ ios: "Nunito", android: "sans-serif", default: "system-ui" }), // woordmerk, hero
+  body: Platform.select({ ios: "System", android: "sans-serif", default: "system-ui" }),  // UI
+  mono: Platform.select({ ios: "Menlo", android: "monospace", default: "monospace" }),
 } as const;
 
 export const TYPE = {
-  h1: { fontSize: 28, lineHeight: 34, fontWeight: "500" as const, letterSpacing: -0.5 },
-  h2: { fontSize: 22, lineHeight: 28, fontWeight: "500" as const, letterSpacing: -0.3 },
+  display: { fontSize: 36, lineHeight: 40, fontWeight: "800" as const, letterSpacing: -0.8 },
+  h1: { fontSize: 28, lineHeight: 32, fontWeight: "700" as const, letterSpacing: -0.4 },
+  h2: { fontSize: 22, lineHeight: 28, fontWeight: "700" as const, letterSpacing: -0.3 },
   h3: { fontSize: 18, lineHeight: 24, fontWeight: "600" as const, letterSpacing: -0.2 },
-  body: { fontSize: 15, lineHeight: 22, fontWeight: "400" as const },
-  bodyMedium: { fontSize: 15, lineHeight: 22, fontWeight: "500" as const },
-  small: { fontSize: 13, lineHeight: 18, fontWeight: "400" as const },
-  caption: { fontSize: 11.5, lineHeight: 16, fontWeight: "500" as const, letterSpacing: 0.3 },
-  overline: { fontSize: 10.5, lineHeight: 14, fontWeight: "700" as const, letterSpacing: 0.6 },
+  body: { fontSize: 16, lineHeight: 24, fontWeight: "400" as const },
+  bodyMedium: { fontSize: 16, lineHeight: 24, fontWeight: "500" as const },
+  small: { fontSize: 14, lineHeight: 20, fontWeight: "400" as const },
+  caption: { fontSize: 12, lineHeight: 16, fontWeight: "500" as const },
+  overline: { fontSize: 11, lineHeight: 14, fontWeight: "700" as const, letterSpacing: 0.5 },
 };
 
-/* ──────────────────────────────────────────────────────────────────────────
-   Motion (timings)
-   ────────────────────────────────────────────────────────────────────────── */
 export const MOTION = {
   fast: 150,
   base: 200,
-  modal: 250,
-  drawer: 280,
+  moderate: 300,
+  slow: 500,
 } as const;
 
 /* ──────────────────────────────────────────────────────────────────────────
-   Aliased palette voor compatibiliteit met bestaande code (Palette interface)
+   Palette alias voor bestaande code (`useTheme().palette`)
    ────────────────────────────────────────────────────────────────────────── */
 export const PALETTE = {
   background: LAYERS.canvas,
-  surfaceElevated: LAYERS.card,
-  surfaceHigher: LAYERS.popover,
+  surfaceElevated: LAYERS.sidebar,
+  surfaceHigher: LAYERS.card,
   borderSubtle: BORDER.subtle,
   borderDefault: BORDER.default,
-  borderEmphasis: BORDER.emphasis,
+  borderEmphasis: BORDER.medium,
   textPrimary: TEXT.primary,
   textSecondary: TEXT.secondary,
-  textMuted: TEXT.muted,
-  textFaint: TEXT.faint,
+  textMuted: TEXT.secondary,
+  textFaint: TEXT.tertiary,
   accent: BRAND.blue,
   accentSoft: BRAND.blueAlpha15,
-  success: STATUS.success,
+  success: BRAND.green,
   successBg: STATUS.successBg,
-  warning: STATUS.warning,
-  danger: STATUS.danger,
+  warning: BRAND.orange,
+  danger: STATUS.dangerBorder,
   dangerBg: STATUS.dangerBg,
   inversePrimary: TEXT.inverse,
 } as const;

@@ -28,7 +28,7 @@ const COLORS = {
   ringStroke: "rgba(74, 144, 226, 0.35)",
   glow: "rgba(74, 144, 226, 0.20)",
   badgeBg: "rgba(74, 144, 226, 0.14)",
-  badgeText: "#7DB6F0",
+  badgeText: "#1E40AF",
 };
 
 const STEPS = ["Verbinding beveiligd", "Sleutels aangemaakt", "Berichten versleuteld"];

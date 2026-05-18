@@ -1,26 +1,21 @@
 import React from "react";
-import { View, StyleSheet, ViewStyle, StyleProp, TouchableOpacity, Platform } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
+import { View, StyleSheet, ViewStyle, StyleProp, TouchableOpacity } from "react-native";
 import { LAYERS, BORDER, RADII, shadow } from "@/src/theme/tokens";
 
 interface Props {
   children: React.ReactNode;
   onPress?: () => void;
-  variant?: "static" | "tappable" | "elevated"; // elevated = popover-laag
+  variant?: "static" | "tappable" | "elevated";
   padding?: number;
   style?: StyleProp<ViewStyle>;
   testID?: string;
-  highlight?: boolean; // toon de inner-highlight bovenaan
-  bare?: boolean; // geen border/shadow
+  bare?: boolean;
 }
 
 /**
- * Premium card op Laag 2.
- * - subtle gradient (2% top→bottom)
- * - inner-highlight bovenaan
- * - 2-laags schaduw
+ * Premium card — wit oppervlak op canvas met subtiele border + zachte 2-laags schaduw.
  */
-export function Card({ children, onPress, variant = "static", padding = 20, style, testID, highlight = true, bare = false }: Props) {
+export function Card({ children, onPress, variant = "static", padding = 20, style, testID, bare = false }: Props) {
   const Inner = (
     <View
       style={[
@@ -28,6 +23,7 @@ export function Card({ children, onPress, variant = "static", padding = 20, styl
         {
           padding,
           borderRadius: RADII.lg,
+          backgroundColor: LAYERS.card,
         },
         !bare && {
           borderWidth: 1,
@@ -38,16 +34,7 @@ export function Card({ children, onPress, variant = "static", padding = 20, styl
       ]}
       testID={testID}
     >
-      <LinearGradient
-        colors={variant === "elevated" ? [LAYERS.popover, "#262626"] : ["#262626", "#222222"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={[StyleSheet.absoluteFillObject, { borderRadius: RADII.lg }]}
-      />
-      {highlight ? (
-        <View pointerEvents="none" style={styles.innerHighlight} />
-      ) : null}
-      <View style={{ position: "relative" }}>{children}</View>
+      {children}
     </View>
   );
 
@@ -65,13 +52,5 @@ const styles = StyleSheet.create({
   base: {
     overflow: "hidden",
     position: "relative",
-  },
-  innerHighlight: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: BORDER.topHighlight,
   },
 });

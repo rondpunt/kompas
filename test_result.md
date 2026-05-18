@@ -432,15 +432,10 @@ agent_communication:
 
   - agent: "main"
     message: |
-      Iteratie 10 — Volledige design system v3 doorgevoerd (Junie premium dark).
-      - Nieuw token-bestand `/app/frontend/src/theme/tokens.ts` (LAYERS, BRAND, RADII, shadows, glowBlue, typografie).
-      - Theme nu **dark-only** (Klaar verwijderd, `ThemeContext` locked).
-      - Brand palette geswitcht naar Junie blue (#4A90E2 + multicolor accents).
-      - Multicolor Junie logo asset toegevoegd `/app/frontend/assets/images/junie-logo.png` en geserveerd via `JunieLogo` component.
-      - Settings: appearance gereduceerd tot pill "Dark", thema-switcher verwijderd.
-      - SecureHandshake: groen/amber → Junie blue (consistent).
-      - Community hero splash: amber → blue.
-      - Alle inverse text op accent buttons nu wit (was #0a0a0a).
-      - Tokens-component-pack toegevoegd: `Button` (primary/rainbow/secondary/danger), `Card` (gradient + inner-highlight + shadow-system).
+      Iteratie 11 — Detail-schermen finishing + premium noise overlay.
+      - `zelftesten/[id]/result/[resultId].tsx`: subscale-box → `<Card>`, action stack → `<Button variant="primary">`, lock-row premium styling.
+      - `instellingen/profiel/[section].tsx`: inputs nu radius 14 + padding 14/12, chips radius 999 met 1px border, slider dots radius 12.
+      - `NoiseOverlay` component (~1.5% SVG fractal noise) wereldwijd via `_layout.tsx`, voor premium "geen platte digitale" feel.
+      - Root layout: canvas-kleur expliciet als LAYERS.canvas voor consistente achtergrond.
       Geen backend wijzigingen.
 
