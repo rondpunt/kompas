@@ -1,95 +1,61 @@
-import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from "react-native";
+import React, { useRef, useEffect } from "react";
+import { View, Text, TouchableOpacity, StyleSheet, Animated, Platform } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { useTheme } from "@/src/theme/ThemeContext";
+import { BRAND, RADII } from "@/src/theme/tokens";
 
-interface Props {
-  variant?: "chat" | "result" | "sidebar";
-  message?: string;
-  onPress: () => void;
-  onDismiss: () => void;
-  testID?: string;
-}
+type BannerVariant = "chat" | "test" | "memory";
 
-const DEFAULTS: Record<NonNullable<Props["variant"]>, string> = {
-  chat: "Onthoud wat speelt, ook over gesprekken heen. Probeer Plus.",
-  result: "Bewaar dit resultaat en zie evolutie. Probeer Plus.",
-  sidebar: "Alles privé, voor altijd bewaard. Probeer Plus.",
+const COPY: Record<BannerVariant, { icon: string; title: string; sub: string }> = {
+  chat: { icon: "zap", title: "Je nadert je gratis limiet", sub: "Upgrade voor onbeperkte gesprekken" },
+  test: { icon: "check-square", title: "Dit is een Plus zelftest", sub: "Upgrade voor alle 24 testen" },
+  memory: { icon: "cpu", title: "Cross-session geheugen", sub: "Upgrade zodat Kompas je onthoudt" },
 };
 
-export function PlusHintBanner({ variant = "chat", message, onPress, onDismiss, testID }: Props) {
-  const { palette } = useTheme();
-  const text = message ?? DEFAULTS[variant];
+interface Props { variant: BannerVariant; onPress: () => void; onDismiss: () => void; }
+
+export function PlusHintBanner({ variant, onPress, onDismiss }: Props) {
+  const slideY = useRef(new Animated.Value(40)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
+  const copy = COPY[variant];
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(slideY, { toValue: 0, useNativeDriver: true, damping: 16, stiffness: 160 }),
+      Animated.timing(opacity, { toValue: 1, duration: 250, useNativeDriver: true }),
+    ]).start();
+  }, []);
   return (
-    <View
-      testID={testID ?? "plus-hint"}
-      style={[
-        styles.wrap,
-        {
-          backgroundColor: palette.accentSoft,
-          borderColor: palette.accent + "55",
-        },
-      ]}
-    >
-      <View style={[styles.iconBox, { backgroundColor: palette.accent }]}>
-        <Feather name="zap" size={12} color="#ffffff" />
-      </View>
-      <TouchableOpacity onPress={onPress} style={styles.textBtn} activeOpacity={0.7}>
-        <Text style={[styles.text, { color: palette.textPrimary }]} numberOfLines={2}>
-          {text}
-        </Text>
-        <Feather name="chevron-right" size={14} color={palette.textMuted} />
+    <Animated.View style={[styles.wrap, { opacity, transform: [{ translateY: slideY }] }]}>
+      <TouchableOpacity style={styles.inner} onPress={onPress} activeOpacity={0.85}>
+        <View style={styles.iconWrap}><Feather name={copy.icon as any} size={16} color="#fff" /></View>
+        <View style={styles.text}>
+          <Text style={styles.title}>{copy.title}</Text>
+          <Text style={styles.sub}>{copy.sub}</Text>
+        </View>
+        <View style={styles.cta}><Text style={styles.ctaText}>Plus</Text></View>
       </TouchableOpacity>
-      <TouchableOpacity onPress={onDismiss} style={styles.dismissBtn} testID="plus-hint-dismiss">
-        <Feather name="x" size={14} color={palette.textMuted} />
+      <TouchableOpacity style={styles.dismiss} onPress={onDismiss}>
+        <Feather name="x" size={14} color={BRAND.blue} />
       </TouchableOpacity>
-    </View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   wrap: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginHorizontal: 12,
-    marginBottom: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 14,
-    borderWidth: 0.5,
-    gap: 8,
+    marginHorizontal: 12, marginBottom: 6, flexDirection: "row",
+    backgroundColor: BRAND.blueAlpha08, borderRadius: RADII.md,
+    borderWidth: 0.5, borderColor: BRAND.blueAlpha25, overflow: "hidden",
     ...Platform.select({
-      ios: {
-        shadowColor: "#4A90E2",
-        shadowOpacity: 0.15,
-        shadowRadius: 12,
-        shadowOffset: { width: 0, height: 4 },
-      },
-      android: { elevation: 0 },
+      ios: { shadowColor: BRAND.blue, shadowOpacity: 0.15, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
+      android: { elevation: 2 },
     }),
   },
-  iconBox: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  textBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  text: {
-    flex: 1,
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  dismissBtn: {
-    width: 24,
-    height: 24,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  inner: { flex: 1, flexDirection: "row", alignItems: "center", gap: 10, padding: 12 },
+  iconWrap: { width: 30, height: 30, borderRadius: 8, backgroundColor: BRAND.blue, alignItems: "center", justifyContent: "center" },
+  text: { flex: 1 },
+  title: { fontSize: 13, fontWeight: "600", color: "#111111" },
+  sub: { fontSize: 11.5, color: "#6B7280", marginTop: 1 },
+  cta: { backgroundColor: BRAND.blue, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
+  ctaText: { color: "#fff", fontSize: 12, fontWeight: "700" },
+  dismiss: { paddingHorizontal: 10, alignItems: "center", justifyContent: "center", borderLeftWidth: 0.5, borderLeftColor: BRAND.blueAlpha15 },
 });
