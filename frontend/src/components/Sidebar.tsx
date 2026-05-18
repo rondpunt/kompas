@@ -1,19 +1,11 @@
-import React, { useEffect, useState, useCallback } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Modal,
-  ScrollView,
-  TextInput,
-  SafeAreaView,
-} from "react-native";
+import React, { useEffect, useState, useCallback, useRef } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, TextInput, SafeAreaView, Platform, Animated } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useTheme } from "@/src/theme/ThemeContext";
 import { api, ApiConversation } from "@/src/api/client";
 import { Wordmark } from "./Wordmark";
+import { BRAND } from "@/src/theme/tokens";
 
 interface Props {
   visible: boolean;
@@ -28,14 +20,7 @@ function groupByDate(items: ApiConversation[]) {
   const yesterday = new Date(today.getTime() - 86400000);
   const week = new Date(today.getTime() - 7 * 86400000);
   const month = new Date(today.getTime() - 30 * 86400000);
-
-  const groups: Record<string, ApiConversation[]> = {
-    "Vandaag": [],
-    "Gisteren": [],
-    "Afgelopen 7 dagen": [],
-    "Afgelopen 30 dagen": [],
-    "Ouder": [],
-  };
+  const groups: Record<string, ApiConversation[]> = { "Vandaag": [], "Gisteren": [], "Afgelopen 7 dagen": [], "Afgelopen 30 dagen": [], "Ouder": [] };
   for (const c of items) {
     const d = new Date(c.updated_at);
     if (d >= today) groups["Vandaag"].push(c);
@@ -47,58 +32,48 @@ function groupByDate(items: ApiConversation[]) {
   return groups;
 }
 
+const NAV_LINKS = [
+  { testID: "sidebar-link-profiel", icon: "user", label: "Profiel", route: "/instellingen/profiel" },
+  { testID: "sidebar-link-zelftesten", icon: "check-square", label: "Zelftesten", route: "/zelftesten" },
+  { testID: "sidebar-link-community", icon: "users", label: "Gemeenschap", route: "/community", plus: true },
+  { testID: "sidebar-link-instellingen", icon: "settings", label: "Instellingen", route: "/instellingen" },
+] as const;
+
 export function Sidebar({ visible, onClose, currentConversationId, onSelectConversation }: Props) {
   const { palette } = useTheme();
   const router = useRouter();
   const [conversations, setConversations] = useState<ApiConversation[]>([]);
   const [search, setSearch] = useState("");
+  const slideX = useRef(new Animated.Value(-340)).current;
+  const overlayOpacity = useRef(new Animated.Value(0)).current;
 
   const load = useCallback(async () => {
-    try {
-      const data = await api.listConversations();
-      setConversations(data);
-    } catch (e) {
-      console.warn("Failed to load conversations", e);
-    }
+    try { setConversations(await api.listConversations()); } catch {}
   }, []);
 
   useEffect(() => {
-    if (visible) load();
+    if (visible) {
+      load();
+      Animated.parallel([
+        Animated.spring(slideX, { toValue: 0, useNativeDriver: true, damping: 22, stiffness: 220 }),
+        Animated.timing(overlayOpacity, { toValue: 1, duration: 200, useNativeDriver: true }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(slideX, { toValue: -340, duration: 220, useNativeDriver: true }),
+        Animated.timing(overlayOpacity, { toValue: 0, duration: 180, useNativeDriver: true }),
+      ]).start();
+    }
   }, [visible, load]);
 
-  const filtered = conversations.filter((c) =>
-    !search ? true : c.title.toLowerCase().includes(search.toLowerCase()),
-  );
+  const filtered = conversations.filter((c) => !search ? true : c.title.toLowerCase().includes(search.toLowerCase()));
   const groups = groupByDate(filtered);
 
-  const handleNew = () => {
-    onSelectConversation(null);
-    onClose();
-  };
-
-  const handleSelect = (id: string) => {
-    onSelectConversation(id);
-    onClose();
-  };
-
-  const handleDelete = async (id: string) => {
-    try {
-      await api.deleteConversation(id);
-      if (currentConversationId === id) onSelectConversation(null);
-      load();
-    } catch (e) {
-      console.warn(e);
-    }
-  };
-
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
+    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
       <View style={styles.overlay}>
-        <View
-          style={[
-            styles.panel,
-            { backgroundColor: palette.background, borderRightColor: palette.borderDefault },
-          ]}
+        <Animated.View
+          style={[styles.panel, { backgroundColor: palette.background, borderRightColor: palette.borderDefault, transform: [{ translateX: slideX }] }]}
           testID="sidebar-panel"
         >
           <SafeAreaView style={{ flex: 1 }}>
@@ -111,10 +86,12 @@ export function Sidebar({ visible, onClose, currentConversationId, onSelectConve
 
             <TouchableOpacity
               testID="sidebar-new-chat"
-              onPress={handleNew}
-              style={[styles.newBtn, { borderColor: palette.borderDefault }]}
+              onPress={() => { onSelectConversation(null); onClose(); }}
+              style={[styles.newBtn, { borderColor: palette.borderDefault, backgroundColor: palette.surfaceElevated }]}
             >
-              <Feather name="plus" size={16} color={palette.textPrimary} />
+              <View style={[styles.newBtnIcon, { backgroundColor: palette.accent }]}>
+                <Feather name="plus" size={13} color="#fff" />
+              </View>
               <Text style={[styles.newBtnText, { color: palette.textPrimary }]}>Nieuw gesprek</Text>
             </TouchableOpacity>
 
@@ -122,12 +99,18 @@ export function Sidebar({ visible, onClose, currentConversationId, onSelectConve
               <Feather name="search" size={14} color={palette.textMuted} />
               <TextInput
                 testID="sidebar-search"
-                placeholder="Zoeken"
+                placeholder="Zoeken..."
                 placeholderTextColor={palette.textMuted}
                 value={search}
                 onChangeText={setSearch}
-                style={[styles.searchInput, { color: palette.textPrimary }]}
+                style={[styles.searchInput, { color: palette.textPrimary },
+                  Platform.OS === "web" ? ({ outlineStyle: "none" } as any) : null]}
               />
+              {search.length > 0 && (
+                <TouchableOpacity onPress={() => setSearch("")}>
+                  <Feather name="x" size={14} color={palette.textMuted} />
+                </TouchableOpacity>
+              )}
             </View>
 
             <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
@@ -141,207 +124,81 @@ export function Sidebar({ visible, onClose, currentConversationId, onSelectConve
                         <TouchableOpacity
                           key={c.id}
                           testID={`sidebar-convo-${c.id}`}
-                          onPress={() => handleSelect(c.id)}
-                          onLongPress={() => handleDelete(c.id)}
-                          style={[
-                            styles.convoRow,
-                            isActive && { backgroundColor: palette.surfaceElevated },
-                          ]}
+                          onPress={() => { onSelectConversation(c.id); onClose(); }}
+                          onLongPress={() => api.deleteConversation(c.id).then(load).catch(() => {})}
+                          style={[styles.convoRow, isActive && { backgroundColor: palette.accentSoft }]}
                         >
-                          <Text
-                            style={[styles.convoTitle, { color: isActive ? palette.textPrimary : palette.textSecondary }]}
-                            numberOfLines={1}
-                          >
+                          <Feather name="message-circle" size={12} color={isActive ? palette.accent : palette.textMuted} />
+                          <Text style={[styles.convoTitle, { color: isActive ? palette.textPrimary : palette.textSecondary }]} numberOfLines={1}>
                             {c.title || "Nieuw gesprek"}
                           </Text>
+                          {isActive && <View style={[styles.activeDot, { backgroundColor: palette.accent }]} />}
                         </TouchableOpacity>
                       );
                     })}
                   </View>
-                ),
+                )
+              )}
+              {conversations.length === 0 && (
+                <View style={styles.emptyConvos}>
+                  <Feather name="message-square" size={28} color={palette.textFaint} />
+                  <Text style={[styles.emptyConvosText, { color: palette.textMuted }]}>Nog geen gesprekken</Text>
+                </View>
               )}
             </ScrollView>
 
             <View style={[styles.bottomLinks, { borderTopColor: palette.borderSubtle }]}>
-              <TouchableOpacity
-                testID="sidebar-link-profiel"
-                onPress={() => {
-                  onClose();
-                  router.push("/instellingen/profiel" as any);
-                }}
-                style={styles.linkRow}
-              >
-                <View style={styles.linkRowInner}>
-                  <Feather name="user" size={16} color={palette.textPrimary} />
-                  <Text style={[styles.linkText, { color: palette.textPrimary }]}>Profiel</Text>
-                </View>
-                <Feather name="chevron-right" size={16} color={palette.textMuted} />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                testID="sidebar-link-zelftesten"
-                onPress={() => {
-                  onClose();
-                  router.push("/zelftesten");
-                }}
-                style={styles.linkRow}
-              >
-                <View style={styles.linkRowInner}>
-                  <Feather name="check-square" size={16} color={palette.textPrimary} />
-                  <Text style={[styles.linkText, { color: palette.textPrimary }]}>Zelftesten</Text>
-                </View>
-                <Feather name="chevron-right" size={16} color={palette.textMuted} />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                testID="sidebar-link-community"
-                onPress={() => {
-                  onClose();
-                  router.push("/community");
-                }}
-                style={styles.linkRow}
-              >
-                <View style={styles.linkRowInner}>
-                  <Feather name="users" size={16} color={palette.textPrimary} />
-                  <Text style={[styles.linkText, { color: palette.textPrimary }]}>Gemeenschap</Text>
-                  <View style={[styles.plusChip, { backgroundColor: palette.accent }]}>
-                    <Text style={styles.plusChipText}>PLUS</Text>
+              {NAV_LINKS.map((link) => (
+                <TouchableOpacity key={link.testID} testID={link.testID}
+                  onPress={() => { onClose(); router.push(link.route as any); }}
+                  style={styles.linkRow}
+                >
+                  <View style={styles.linkRowInner}>
+                    <Feather name={link.icon as any} size={16} color={palette.textPrimary} />
+                    <Text style={[styles.linkText, { color: palette.textPrimary }]}>{link.label}</Text>
+                    {link.plus && (
+                      <View style={[styles.plusChip, { backgroundColor: BRAND.blue }]}>
+                        <Text style={styles.plusChipText}>PLUS</Text>
+                      </View>
+                    )}
                   </View>
-                </View>
-                <Feather name="chevron-right" size={16} color={palette.textMuted} />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                testID="sidebar-link-instellingen"
-                onPress={() => {
-                  onClose();
-                  router.push("/instellingen");
-                }}
-                style={styles.linkRow}
-              >
-                <View style={styles.linkRowInner}>
-                  <Feather name="settings" size={16} color={palette.textPrimary} />
-                  <Text style={[styles.linkText, { color: palette.textPrimary }]}>Instellingen</Text>
-                </View>
-                <Feather name="chevron-right" size={16} color={palette.textMuted} />
-              </TouchableOpacity>
+                  <Feather name="chevron-right" size={16} color={palette.textMuted} />
+                </TouchableOpacity>
+              ))}
             </View>
           </SafeAreaView>
-        </View>
-        <TouchableOpacity activeOpacity={1} onPress={onClose} style={styles.scrim} />
+        </Animated.View>
+        <Animated.View style={[styles.scrimAnimated, { opacity: overlayOpacity }]}>
+          <TouchableOpacity activeOpacity={1} onPress={onClose} style={StyleSheet.absoluteFillObject} />
+        </Animated.View>
       </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    flexDirection: "row",
-    backgroundColor: "rgba(0,0,0,0.5)",
-  },
-  panel: {
-    width: "82%",
-    maxWidth: 340,
-    borderRightWidth: 0.5,
-  },
-  scrim: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  iconBtn: {
-    padding: 6,
-  },
-  newBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginHorizontal: 12,
-    height: 40,
-    paddingHorizontal: 14,
-    borderRadius: 13,
-    borderWidth: 0.5,
-  },
-  newBtnText: {
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  searchWrap: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginHorizontal: 12,
-    marginTop: 10,
-    paddingHorizontal: 10,
-    height: 38,
-    borderRadius: 13,
-    borderWidth: 0.5,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-  },
-  list: {
-    flex: 1,
-    marginTop: 12,
-    paddingHorizontal: 12,
-  },
-  group: {
-    marginBottom: 14,
-  },
-  groupLabel: {
-    fontSize: 11,
-    fontWeight: "500",
-    letterSpacing: 0.5,
-    textTransform: "uppercase",
-    paddingHorizontal: 8,
-    marginBottom: 4,
-  },
-  convoRow: {
-    paddingVertical: 9,
-    paddingHorizontal: 10,
-    borderRadius: 10,
-  },
-  convoTitle: {
-    fontSize: 14,
-  },
-  bottomLinks: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderTopWidth: 0.5,
-  },
-  linkRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 12,
-    paddingHorizontal: 6,
-  },
-  linkRowInner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  linkText: {
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  plusChip: {
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderRadius: 4,
-    marginLeft: 6,
-  },
-  plusChipText: {
-    color: "#ffffff",
-    fontSize: 9,
-    fontWeight: "700",
-    letterSpacing: 0.4,
-  },
+  overlay: { flex: 1, flexDirection: "row" },
+  panel: { width: "82%", maxWidth: 300, borderRightWidth: 0.5 },
+  scrimAnimated: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.45)", zIndex: -1 },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 14 },
+  iconBtn: { padding: 6 },
+  newBtn: { flexDirection: "row", alignItems: "center", gap: 10, marginHorizontal: 12, height: 42, paddingHorizontal: 12, borderRadius: 12, borderWidth: 0.5, marginBottom: 2 },
+  newBtnIcon: { width: 22, height: 22, borderRadius: 6, alignItems: "center", justifyContent: "center" },
+  newBtnText: { fontSize: 14, fontWeight: "500" },
+  searchWrap: { flexDirection: "row", alignItems: "center", gap: 8, marginHorizontal: 12, marginTop: 8, paddingHorizontal: 10, height: 38, borderRadius: 12, borderWidth: 0.5 },
+  searchInput: { flex: 1, fontSize: 13.5 },
+  list: { flex: 1, marginTop: 10, paddingHorizontal: 8 },
+  group: { marginBottom: 14, paddingHorizontal: 4 },
+  groupLabel: { fontSize: 10.5, fontWeight: "600", letterSpacing: 0.6, textTransform: "uppercase", paddingHorizontal: 8, marginBottom: 4 },
+  convoRow: { paddingVertical: 9, paddingHorizontal: 10, borderRadius: 10, flexDirection: "row", alignItems: "center", gap: 8 },
+  convoTitle: { fontSize: 13.5, flex: 1 },
+  activeDot: { width: 6, height: 6, borderRadius: 3 },
+  emptyConvos: { alignItems: "center", paddingVertical: 32, gap: 10 },
+  emptyConvosText: { fontSize: 13 },
+  bottomLinks: { paddingVertical: 6, paddingHorizontal: 8, borderTopWidth: 0.5 },
+  linkRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 11, paddingHorizontal: 8, borderRadius: 10 },
+  linkRowInner: { flexDirection: "row", alignItems: "center", gap: 10 },
+  linkText: { fontSize: 14, fontWeight: "500" },
+  plusChip: { paddingHorizontal: 5, paddingVertical: 2, borderRadius: 4, marginLeft: 4 },
+  plusChipText: { color: "#ffffff", fontSize: 8.5, fontWeight: "700", letterSpacing: 0.4 },
 });
